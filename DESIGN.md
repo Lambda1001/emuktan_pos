@@ -95,13 +95,13 @@ Every text pair is tested to WCAG AA (4.5:1) in `test/theme_test.dart`.
 1. **Scanner and keyboard:** the search field takes focus when Sell opens. A scan (barcode, then Enter) adds the item. `Ctrl+K` jumps to search from anywhere on Sell. `Esc` closes a sheet.
 2. **Selling units:** each medicine shows only the ways it is actually sold (pack, strip, single). The row says what leaves stock, for example "2 strips = 20 tablets".
 3. **Batches:** the system picks the batch that expires first and shows it. Staff never choose a batch by hand during a sale.
-4. **Discounts** need a clinician's approval. A cashier sees a sheet asking a clinician to enter their PIN. The approver is recorded on the sale.
+4. **Discounts** need a clinician or the owner to approve. A cashier sees a sheet asking one of them to enter their PIN. The approver is recorded on the sale.
 5. **Charge button** says exactly what will happen ("Charge KES 1,320"). If it is disabled, a line under it says why.
 6. **Warnings in plain words:** "Expired. Do not sell." beats "Status: 3".
 7. **Offline is normal.** No error dialogs for a lost connection. The status bar says "Working offline" and sales continue. A sync that has not succeeded for 24 hours turns the status bar amber and says so.
 8. **Empty states** say what will appear and how to add the first item.
 9. **Destructive actions** (void sale, write off stock) use a sheet that states the consequence, and ask for a reason.
-10. **Never block on the owner.** If a clinician is away, a discount simply cannot be applied; the sale can still be completed at full price.
+10. **Never block on one person.** If no clinician or owner is available, a discount simply cannot be applied; the sale can still be completed at full price.
 
 ## 9. Writing
 
@@ -118,11 +118,13 @@ Every text pair is tested to WCAG AA (4.5:1) in `test/theme_test.dart`.
 - Visible focus ring on every control (2 px accent). Full keyboard path through every screen.
 - Respect the Windows "reduce animation" setting. Motion is 120 to 200 ms and only confirms a change.
 
-## 11. Open questions
+## 11. Decisions (approved Oct 2026)
 
-1. Will the counter PC have a touchscreen? (Decides whether 48 px targets are needed beyond Sell.)
-2. Screen size and resolution of the PC to be bought.
-3. English only, or English and Swahili labels?
-4. Logo and brand colour: the clinical blue is a proposal, not taken from an existing brand.
-5. Can the owner approve discounts when no clinician is present? (The scope says clinician only; the owner also works the counter.)
-6. Receipt layout and paper width (58 mm or 80 mm) once the printer is chosen.
+1. **Input:** the counter is a standard PC with mouse, keyboard and scanner. No touchscreen. The 48 px target stays on the Sell screen only; everywhere else uses 40 px.
+2. **Screen:** 24-inch monitor. Minimum supported window is 1366 x 720 (enforced in the Windows runner). Layouts must work at that size and use the extra space on larger screens.
+3. **Language:** English only. No localisation layer for now.
+4. **Brand and logo:** not decided. All brand values (name, accent colours, logo) live in `lib/config/brand.dart`. Changing them there rebrands the whole app; `test/theme_test.dart` checks contrast of the new colours.
+5. **Discounts:** the owner can apply discounts without a clinician, as well as clinicians. Cashiers still need a clinician or the owner to enter their PIN. The approver is recorded on the sale.
+6. **Receipts:** 80 mm thermal paper, 48 characters per line (`ReceiptConfig` in `lib/config/app_config.dart`). Confirm the column count once the printer model is chosen.
+7. **Expired stock is warn-only.** The Stock screen marks expired batches with an "Expired" chip. A sale takes from non-expired batches first and uses expired stock only when nothing else is left. The line then shows "Expired. Do not sell.", the summary shows a notice, and Charge asks for confirmation ("Go back" / "Sell anyway"). It is never blocked.
+8. **Cost prices are visible to everyone** who can open Batches (cashiers included). Cost is recorded per unit on each batch when stock is received, so the cost of any sale can be read from the batch it took from.

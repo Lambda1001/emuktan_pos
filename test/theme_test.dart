@@ -17,19 +17,30 @@ double contrast(Color a, Color b) {
 }
 
 void main() {
-  for (final entry in {'light': AppColors.light, 'dark': AppColors.dark}.entries) {
+  for (final entry in {
+    'light': AppColors.light,
+    'dark': AppColors.dark,
+  }.entries) {
     final c = entry.value;
     group('${entry.key} palette meets WCAG AA (4.5:1) for text', () {
       test('body text on window and surface', () {
         for (final bg in [c.window, c.surface]) {
           for (final fg in [c.text, c.textSecondary, c.textTertiary]) {
-            expect(contrast(fg, bg), greaterThanOrEqualTo(4.5), reason: '$fg on $bg');
+            expect(
+              contrast(fg, bg),
+              greaterThanOrEqualTo(4.5),
+              reason: '$fg on $bg',
+            );
           }
         }
       });
       test('accent and status colours on surface', () {
         for (final fg in [c.accent, c.success, c.warning, c.critical]) {
-          expect(contrast(fg, c.surface), greaterThanOrEqualTo(4.5), reason: '$fg');
+          expect(
+            contrast(fg, c.surface),
+            greaterThanOrEqualTo(4.5),
+            reason: '$fg',
+          );
         }
       });
       test('status colours on their soft fills', () {
@@ -57,7 +68,13 @@ void main() {
 
   test('no text style is smaller than the caption size', () {
     final t = buildTheme(Brightness.light).textTheme;
-    for (final s in [t.bodySmall, t.labelSmall, t.labelMedium, t.bodyMedium, t.titleMedium]) {
+    for (final s in [
+      t.bodySmall,
+      t.labelSmall,
+      t.labelMedium,
+      t.bodyMedium,
+      t.titleMedium,
+    ]) {
       expect(s!.fontSize!, greaterThanOrEqualTo(TypeScale.caption));
     }
   });

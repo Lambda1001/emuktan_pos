@@ -197,6 +197,19 @@ Win32Window::MessageHandler(HWND hwnd,
 
       return 0;
     }
+    case WM_GETMINMAXINFO: {
+      // Minimum usable client area is 1366 x 720 (see DESIGN.md section 4).
+      const UINT dpi = GetDpiForWindow(hwnd);
+      const double scale = dpi / 96.0;
+      RECT frame = {0, 0, static_cast<LONG>(1366 * scale),
+                    static_cast<LONG>(720 * scale)};
+      AdjustWindowRectExForDpi(&frame, GetWindowLong(hwnd, GWL_STYLE), FALSE,
+                               GetWindowLong(hwnd, GWL_EXSTYLE), dpi);
+      auto info = reinterpret_cast<MINMAXINFO*>(lparam);
+      info->ptMinTrackSize.x = frame.right - frame.left;
+      info->ptMinTrackSize.y = frame.bottom - frame.top;
+      return 0;
+    }
     case WM_SIZE: {
       RECT rect = GetClientArea();
       if (child_content_ != nullptr) {

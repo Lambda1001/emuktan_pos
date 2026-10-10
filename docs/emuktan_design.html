@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}</style>
+<title>Emuktan Interface Design</title>
+<style>
+/* Layout: a page header with two tabs. "Screens" shows a working Windows app window (sign in, sell, patients, stock);
+   "System" documents the tokens behind it. Fonts are the Windows system face on purpose: the real app cannot download fonts offline. */
+:root {
+  --window: #F4F6F8;
+  --surface: #FFFFFF;
+  --sidebar: #EBEEF2;
+  --sep: #D8DDE4;
+  --text: #14181F;
+  --text2: #586171;
+  --text3: #687180;
+  --accent: #0A64AD;
+  --on-accent: #FFFFFF;
+  --accent-soft: #E2EFFA;
+  --success: #18733E;
+  --success-soft: #E6F5EC;
+  --warning: #9A5B00;
+  --warning-soft: #FCEFD6;
+  --critical: #C62B27;
+  --critical-soft: #FBE4E3;
+  --shadow: 0 18px 50px rgba(20, 30, 45, .14), 0 2px 6px rgba(20, 30, 45, .08);
+  --scrim: rgba(20, 24, 31, .38);
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "SF Pro Text", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "Cascadia Mono", Consolas, ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --window: #14171B; --surface: #1D2127; --sidebar: #191C21; --sep: #343A44;
+    --text: #F1F3F6; --text2: #A9B1BE; --text3: #8F98A6;
+    --accent: #59AEF0; --on-accent: #0B1520; --accent-soft: #1B3144;
+    --success: #4CC27E; --success-soft: #173626; --warning: #E8A33B; --warning-soft: #3B2C12;
+    --critical: #FF6B63; --critical-soft: #412120;
+    --shadow: 0 18px 50px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .4); --scrim: rgba(0, 0, 0, .55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --window: #14171B; --surface: #1D2127; --sidebar: #191C21; --sep: #343A44;
+  --text: #F1F3F6; --text2: #A9B1BE; --text3: #8F98A6;
+  --accent: #59AEF0; --on-accent: #0B1520; --accent-soft: #1B3144;
+  --success: #4CC27E; --success-soft: #173626; --warning: #E8A33B; --warning-soft: #3B2C12;
+  --critical: #FF6B63; --critical-soft: #412120;
+  --shadow: 0 18px 50px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .4); --scrim: rgba(0, 0, 0, .55);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--window); color: var(--text); font: 14px/1.4 var(--font);
+  padding-inline: 16px; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums;
+}
+button, input, textarea { font: inherit; color: inherit; }
+h1, h2, h3, p { margin: 0; text-wrap: balance; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.wrap { max-width: 1240px; margin-inline: auto; padding-block: 28px 56px; display: grid; gap: 22px; }
+.head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; }
+.head h1 { font-size: 28px; line-height: 1.15; font-weight: 700; letter-spacing: -.01em; }
+.head p { color: var(--text2); max-width: 62ch; margin-top: 6px; text-wrap: pretty; }
+
+/* controls */
+.seg { display: inline-flex; background: var(--sidebar); border: 1px solid var(--sep); border-radius: 10px; padding: 2px; gap: 2px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; border-radius: 8px; padding: 0 14px; height: 32px; color: var(--text2); cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+.seg button:hover { color: var(--text); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(20,30,45,.18); font-weight: 600; }
+.seg.big button { height: 48px; padding: 0 18px; flex: 1; justify-content: center; }
+.seg.big { display: flex; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--sep); background: var(--surface); color: var(--text); font-weight: 600; cursor: pointer; }
+.btn:hover { background: var(--window); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.primary:disabled { background: var(--sidebar); border-color: var(--sep); color: var(--text3); cursor: not-allowed; filter: none; }
+.btn.danger { color: var(--critical); }
+.btn.plain { border-color: transparent; background: transparent; color: var(--accent); }
+.btn.plain:hover { background: var(--accent-soft); }
+.btn.lg { height: 52px; font-size: 16px; width: 100%; border-radius: 10px; }
+.btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+.icon-btn { width: 40px; padding: 0; }
+.field { display: grid; gap: 6px; }
+.field > span { font-size: 12px; font-weight: 600; color: var(--text2); letter-spacing: .02em; }
+.input { height: 40px; width: 100%; border: 1px solid var(--sep); background: var(--surface); border-radius: 8px; padding: 0 12px; }
+.input::placeholder { color: var(--text3); }
+.input:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+textarea.input { height: auto; min-height: 120px; padding: 10px 12px; resize: vertical; line-height: 1.5; }
+.input.num { text-align: right; }
+.chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--sidebar); color: var(--text2); }
+.chip svg.i { width: 13px; height: 13px; stroke-width: 2; }
+.chip.ok { background: var(--success-soft); color: var(--success); }
+.chip.warn { background: var(--warning-soft); color: var(--warning); }
+.chip.bad { background: var(--critical-soft); color: var(--critical); }
+.chip.info { background: var(--accent-soft); color: var(--accent); }
+.card { background: var(--surface); border: 1px solid var(--sep); border-radius: 12px; }
+.muted { color: var(--text2); }
+.small { font-size: 13px; }
+.cap { font-size: 12px; font-weight: 600; color: var(--text2); letter-spacing: .04em; text-transform: uppercase; }
+.num-r { text-align: right; }
+
+/* window */
+.scroller { overflow-x: auto; padding-bottom: 6px; }
+.win { min-width: 1040px; height: 700px; display: grid; grid-template-rows: 34px minmax(0, 1fr) 30px; border: 1px solid var(--sep); border-radius: 10px; overflow: hidden; background: var(--window); box-shadow: var(--shadow); position: relative; }
+.titlebar { display: flex; align-items: center; justify-content: space-between; background: var(--sidebar); border-bottom: 1px solid var(--sep); padding-left: 12px; font-size: 12px; color: var(--text2); }
+.titlebar .t { display: flex; align-items: center; gap: 8px; }
+.wc { display: flex; height: 100%; }
+.wc span { width: 46px; display: grid; place-items: center; color: var(--text2); }
+.wc svg.i { width: 12px; height: 12px; stroke-width: 1.4; }
+.app { display: grid; grid-template-columns: 208px minmax(0, 1fr); min-height: 0; }
+.app.solo { grid-template-columns: 1fr; }
+.side { background: var(--sidebar); border-right: 1px solid var(--sep); padding: 14px 10px; display: flex; flex-direction: column; gap: 4px; min-height: 0; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 14px; font-weight: 700; font-size: 16px; }
+.mark { width: 26px; height: 26px; border-radius: 8px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; }
+.mark svg.i { width: 16px; height: 16px; stroke-width: 2.4; }
+.nav { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: 0; background: transparent; border-radius: 8px; color: var(--text); cursor: pointer; text-align: left; width: 100%; }
+.nav:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+.nav[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.side .cap { padding: 12px 10px 4px; }
+.me { margin-top: auto; border-top: 1px solid var(--sep); padding: 12px 6px 0; display: grid; gap: 8px; }
+.me .who { display: flex; align-items: center; gap: 10px; }
+.av { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 12px; flex: none; }
+.av.lg { width: 56px; height: 56px; font-size: 18px; }
+.page { overflow: auto; padding: 20px 24px 24px; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+.ph { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ph h2 { font-size: 20px; font-weight: 600; line-height: 1.25; }
+.status { background: var(--sidebar); border-top: 1px solid var(--sep); display: flex; justify-content: space-between; align-items: center; padding: 0 14px; font-size: 12px; color: var(--text2); gap: 12px; }
+.status span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+
+/* sign in */
+.signin { display: grid; place-items: center; padding: 24px; overflow: auto; }
+.signin .box { width: min(440px, 100%); display: grid; gap: 22px; justify-items: center; text-align: center; }
+.signin h2 { font-size: 28px; font-weight: 700; letter-spacing: -.01em; }
+.users { display: grid; gap: 10px; width: 100%; }
+.user { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--sep); border-radius: 12px; cursor: pointer; text-align: left; width: 100%; min-height: 72px; }
+.user:hover { border-color: var(--accent); }
+.dots { display: flex; gap: 14px; height: 16px; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--text3); }
+.dots i.on { background: var(--text); border-color: var(--text); }
+.pad { display: grid; grid-template-columns: repeat(3, 72px); gap: 10px; }
+.pad button { height: 56px; border-radius: 12px; border: 1px solid var(--sep); background: var(--surface); font-size: 20px; font-weight: 500; cursor: pointer; }
+.pad button:hover { background: var(--accent-soft); }
+.pad button.fn { background: transparent; border-color: transparent; font-size: 14px; color: var(--accent); font-weight: 600; }
+
+/* sell */
+.sell { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; flex: 1; min-height: 0; }
+.col { display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0; }
+.search { position: relative; }
+.search svg.i { position: absolute; left: 12px; top: 11px; color: var(--text3); }
+.search .input { padding-left: 38px; height: 44px; font-size: 15px; }
+.search kbd { position: absolute; right: 10px; top: 10px; font: 12px var(--font); color: var(--text2); border: 1px solid var(--sep); border-radius: 5px; padding: 1px 6px; background: var(--window); }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tile { text-align: left; padding: 10px 12px; border: 1px solid var(--sep); background: var(--surface); border-radius: 12px; cursor: pointer; display: grid; gap: 4px; min-height: 76px; align-content: start; }
+.tile:hover { border-color: var(--accent); }
+.tile b { font-size: 14px; font-weight: 600; line-height: 1.25; }
+.tile .row { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tile.dis { opacity: .55; cursor: not-allowed; }
+.empty { padding: 28px 16px; text-align: center; color: var(--text2); display: grid; gap: 6px; justify-items: center; }
+.cart { display: flex; flex-direction: column; min-height: 0; flex: 1; overflow: hidden; }
+.cart .hd, .line { display: grid; grid-template-columns: minmax(0, 1.7fr) 190px 128px 96px 32px; gap: 12px; align-items: center; padding: 0 16px; }
+.cart .hd { height: 36px; border-bottom: 1px solid var(--sep); }
+.cart .body { overflow: auto; min-height: 0; }
+.line { min-height: 64px; border-bottom: 1px solid var(--sep); padding-block: 8px; }
+.line:last-child { border-bottom: 0; }
+.line .nm { display: grid; gap: 2px; min-width: 0; }
+.line .nm b { font-weight: 600; }
+.step { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--sep); border-radius: 10px; height: 40px; background: var(--surface); }
+.step button { width: 40px; height: 100%; border: 0; background: transparent; cursor: pointer; color: var(--accent); display: grid; place-items: center; border-radius: 10px; }
+.step button:hover:not(:disabled) { background: var(--accent-soft); }
+.step button:disabled { color: var(--text3); cursor: not-allowed; }
+.step span { font-weight: 600; min-width: 28px; text-align: center; }
+.mini { display: inline-flex; border: 1px solid var(--sep); border-radius: 8px; overflow: hidden; width: fit-content; }
+.mini button { border: 0; background: var(--surface); padding: 0 10px; height: 30px; cursor: pointer; font-size: 13px; color: var(--text2); border-right: 1px solid var(--sep); }
+.mini button:last-child { border-right: 0; }
+.mini button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.sum { display: flex; flex-direction: column; gap: 14px; padding: 16px; min-height: 0; overflow: auto; }
+.sum .r { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.total { font-size: 32px; font-weight: 700; letter-spacing: -.01em; line-height: 1.1; }
+.hr { height: 1px; background: var(--sep); border: 0; margin: 0; }
+.why { font-size: 13px; color: var(--text2); text-align: center; min-height: 18px; }
+.quick { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* tables and lists */
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { height: 36px; text-align: left; padding: 0 16px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text2); border-bottom: 1px solid var(--sep); white-space: nowrap; }
+.tbl td { height: 56px; padding: 6px 16px; border-bottom: 1px solid var(--sep); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl .r { text-align: right; }
+.tbl-scroll { overflow-x: auto; }
+.split { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 20px; flex: 1; min-height: 0; }
+.plist { overflow: auto; display: flex; flex-direction: column; }
+.prow { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 0; border-bottom: 1px solid var(--sep); background: transparent; cursor: pointer; text-align: left; width: 100%; }
+.prow:hover { background: var(--window); }
+.prow[aria-current="true"] { background: var(--accent-soft); }
+.banner { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: var(--warning-soft); color: var(--warning); font-weight: 500; }
+.banner b { font-weight: 700; }
+.vit { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.vit div { padding: 10px 14px; border: 1px solid var(--sep); border-radius: 10px; display: grid; gap: 2px; }
+.vit b { font-size: 20px; font-weight: 600; }
+.visit { padding: 14px 16px; border-bottom: 1px solid var(--sep); display: grid; gap: 4px; }
+.visit:last-child { border-bottom: 0; }
+
+/* sheet and toast */
+.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; padding: 16px; z-index: 5; }
+.sheet { width: min(420px, 100%); background: var(--surface); border-radius: 16px; padding: 24px; display: grid; gap: 16px; box-shadow: var(--shadow); border: 1px solid var(--sep); }
+.sheet h3 { font-size: 20px; font-weight: 600; }
+.sheet .acts { display: flex; gap: 10px; justify-content: flex-end; }
+.sheet .acts .btn { min-width: 110px; }
+.toast { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); background: var(--text); color: var(--surface); padding: 10px 16px; border-radius: 10px; font-weight: 500; display: flex; gap: 8px; align-items: center; z-index: 6; box-shadow: var(--shadow); }
+.bigcheck { width: 56px; height: 56px; border-radius: 50%; background: var(--success-soft); color: var(--success); display: grid; place-items: center; }
+.bigcheck svg.i { width: 28px; height: 28px; stroke-width: 2.4; }
+
+/* system tab */
+.sys { display: grid; gap: 40px; }
+.sec { display: grid; gap: 14px; }
+.sec h2 { font-size: 20px; font-weight: 600; }
+.sec > p { color: var(--text2); max-width: 70ch; text-wrap: pretty; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.prin { padding: 16px; display: grid; gap: 6px; align-content: start; }
+.prin h3 { font-size: 15px; font-weight: 600; }
+.prin p { color: var(--text2); font-size: 13px; text-wrap: pretty; }
+.sw { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.sw div { border: 1px solid var(--sep); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.sw i { display: block; height: 52px; border-bottom: 1px solid var(--sep); }
+.sw span { display: grid; padding: 8px 10px; gap: 0; font-size: 12px; }
+.sw b { font-size: 13px; }
+.sw code { font-family: var(--mono); color: var(--text2); }
+.scale { display: grid; }
+.scale div { display: grid; grid-template-columns: 130px minmax(0, 1fr) 150px; gap: 16px; align-items: baseline; padding: 10px 16px; border-bottom: 1px solid var(--sep); }
+.scale div:last-child { border-bottom: 0; }
+.scale code { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+.demo { padding: 20px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.sp { display: flex; gap: 14px; align-items: end; flex-wrap: wrap; padding: 20px; }
+.sp div { display: grid; gap: 6px; justify-items: center; font-size: 12px; color: var(--text2); }
+.sp i { display: block; background: var(--accent); border-radius: 3px; }
+.rules { display: grid; gap: 0; }
+.rules li { padding: 12px 16px; border-bottom: 1px solid var(--sep); display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 16px; }
+.rules li:last-child { border-bottom: 0; }
+.rules ul, .rules { list-style: none; margin: 0; padding: 0; }
+.rules b { font-weight: 600; }
+.rules span { color: var(--text2); }
+@media (max-width: 640px) {
+  .scale div, .rules li { grid-template-columns: 1fr; gap: 4px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .tile, .user, .nav, .prow { transition: background-color .12s ease, border-color .12s ease, filter .12s ease; }
+  .toast, .sheet { animation: rise .2s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translate(var(--tx, 0), 8px); } }
+  .toast { --tx: -50%; }
+}
+</style>
+
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="cart" viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.2a1 1 0 0 0 1 .8h8.6a1 1 0 0 0 1-.8L19 8H6"/><circle cx="9" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></symbol>
+    <symbol id="person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></symbol>
+    <symbol id="box" viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></symbol>
+    <symbol id="chart" viewBox="0 0 24 24"><path d="M5 19V9M12 19V5M19 19v-7"/></symbol>
+    <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 1.5"/></symbol>
+    <symbol id="gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></symbol>
+    <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.2-4.2"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="square" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1"/></symbol>
+    <symbol id="print" viewBox="0 0 24 24"><path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2"/><rect x="7" y="14" width="10" height="6"/></symbol>
+    <symbol id="lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="cross" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="cloud" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 9.5 3.8 3.8 0 0 1 17 18z"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="head">
+    <div>
+      <h1>Emuktan Interface Design</h1>
+      <p>A working mockup of the dispensary app in the Apple HIG style, adapted for Windows. Try signing in and making a sale. All names, stock and prices here are samples.</p>
+    </div>
+    <div class="seg" role="group" aria-label="View">
+      <button type="button" id="tab-screens" aria-pressed="true" data-act="tab" data-t="screens">Screens</button>
+      <button type="button" id="tab-system" aria-pressed="false" data-act="tab" data-t="system">System</button>
+    </div>
+  </header>
+
+  <section id="v-screens" style="display:grid;gap:14px">
+    <div class="seg" role="group" aria-label="Screen" id="picker" style="justify-self:start"></div>
+    <div class="scroller"><div class="win" id="win"></div></div>
+    <p class="muted small">Window drawn at 1040 px minimum width. Scroll sideways on a narrow screen.</p>
+  </section>
+
+  <section id="v-system" class="sys" hidden>
+    <div class="sec">
+      <h2>Principles</h2>
+      <p>Apple's guidelines are about how an interface feels to use. These are the seven that decide most choices in Emuktan.</p>
+      <div class="cols">
+        <div class="card prin"><h3>Clarity</h3><p>One job per screen. Totals and stock are the largest things on Sell. Nothing is set below 12 px.</p></div>
+        <div class="card prin"><h3>Deference</h3><p>White panels on a faint grey window, thin separators. Colour is kept for meaning, so a warning is always noticed.</p></div>
+        <div class="card prin"><h3>Depth</h3><p>Only sheets float above the page. Everything else is flat and quiet.</p></div>
+        <div class="card prin"><h3>Consistency</h3><p>Buttons, fields, chips and tables look the same on every screen, and come from tokens.</p></div>
+        <div class="card prin"><h3>Direct manipulation</h3><p>Click a medicine to add it. Change quantity and unit in the row. No separate edit pages.</p></div>
+        <div class="card prin"><h3>Feedback</h3><p>Every action shows a result: a toast, a changed state, or a sheet. Nothing fails silently.</p></div>
+        <div class="card prin"><h3>User control</h3><p>Confirm only what is destructive or hard to undo. Offline is normal, not an error.</p></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Colour</h2>
+      <p>One accent, a clinical blue. Success, warning and critical are separate from it and always come with an icon or a word. Every text pair passes 4.5:1 in both themes. Values below follow the theme you are viewing.</p>
+      <div class="sw" id="swatches"></div>
+    </div>
+
+    <div class="sec">
+      <h2>Type</h2>
+      <p>Segoe UI Variable on Windows 11, with Segoe UI as fallback. The app never downloads fonts, because it has to work with no internet. Figures are tabular so money lines up.</p>
+      <div class="card scale">
+        <div><code>Amount 32 / 700</code><span style="font-size:32px;font-weight:700;line-height:1.1">KES 1,320</span><code>Totals, change due</code></div>
+        <div><code>Large title 28 / 700</code><span style="font-size:28px;font-weight:700">Who is working?</span><code>Sign-in, empty states</code></div>
+        <div><code>Title 20 / 600</code><span style="font-size:20px;font-weight:600">Stock</span><code>Screen titles</code></div>
+        <div><code>Headline 15 / 600</code><span style="font-size:15px;font-weight:600">Paracetamol 500 mg</span><code>Panel and row names</code></div>
+        <div><code>Body 14 / 400</code><span>Batch PX2417, expires Mar 2028</span><code>Default text</code></div>
+        <div><code>Callout 13 / 400</code><span class="small muted">842 tablets in stock</span><code>Secondary detail</code></div>
+        <div><code>Caption 12 / 500</code><span class="cap">Patient</span><code>Labels, chips, status bar</code></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Space and shape</h2>
+      <p>A 4 pt grid. Controls are 40 px high, and 48 px on the Sell screen where speed matters. Panels use a 12 px radius, controls 8 px, sheets 16 px.</p>
+      <div class="card sp" aria-label="Spacing scale">
+        <div><i style="width:4px;height:4px"></i>4</div><div><i style="width:8px;height:8px"></i>8</div><div><i style="width:12px;height:12px"></i>12</div>
+        <div><i style="width:16px;height:16px"></i>16</div><div><i style="width:24px;height:24px"></i>24</div><div><i style="width:32px;height:32px"></i>32</div><div><i style="width:48px;height:48px"></i>48</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Components</h2>
+      <div class="card demo">
+        <button type="button" class="btn primary">Charge KES 1,320</button>
+        <button type="button" class="btn">Print receipt</button>
+        <button type="button" class="btn plain">Add discount</button>
+        <button type="button" class="btn danger">Void sale</button>
+        <button type="button" class="btn primary" disabled>Charge</button>
+        <div class="seg" role="group" aria-label="Example"><button type="button" aria-pressed="true">Cash</button><button type="button" aria-pressed="false">M-Pesa</button></div>
+        <span class="chip ok"><svg class="i"><use href="#check"/></svg>In stock</span>
+        <span class="chip warn"><svg class="i"><use href="#warn"/></svg>Low stock</span>
+        <span class="chip bad"><svg class="i"><use href="#x"/></svg>Expired</span>
+        <span class="chip info">Walk-in</span>
+        <label class="field" style="width:200px"><span>Amount received</span><input class="input num" id="demo-amt" value="1,500" /></label>
+        <div class="banner" style="flex:1 1 280px"><svg class="i"><use href="#warn"/></svg><div><b>Allergies:</b> Penicillin, reported by patient</div></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Rules for behaviour</h2>
+      <ul class="card rules">
+        <li><b>Scanner first</b><span>Search takes focus when Sell opens. A scan plus Enter adds the item. Ctrl+K jumps to search. Esc closes a sheet.</span></li>
+        <li><b>Units are explicit</b><span>Each medicine shows only the ways it is sold. The row states what leaves stock, for example "2 strips = 20 tablets".</span></li>
+        <li><b>Batches are automatic</b><span>The batch that expires first is used and shown. Staff do not pick batches during a sale.</span></li>
+        <li><b>Discounts need a clinician</b><span>A cashier cannot apply one alone. A clinician enters their PIN, and the approver is recorded on the sale.</span></li>
+        <li><b>The button says what happens</b><span>"Charge KES 1,320", not "Submit". When it is disabled, a line under it says why.</span></li>
+        <li><b>Offline is normal</b><span>No error dialogs for a lost connection. The status bar says it, and sales continue. A backup older than 24 hours turns the bar amber.</span></li>
+        <li><b>Plain warnings</b><span>"Expired. Do not sell." beats a code. Quantities always carry the unit.</span></li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var fmt = function (n) { return 'KES ' + Number(n).toLocaleString('en-KE'); };
+  var ic = function (n, extra) { return '<svg class="i"' + (extra ? ' ' + extra : '') + '><use href="#' + n + '"/></svg>'; };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+
+  var USERS = [
+    { id: 1, name: 'Lucy Wanjiku', role: 'Owner', ini: 'LW' },
+    { id: 2, name: 'Peter Otieno', role: 'Cashier', ini: 'PO' },
+    { id: 3, name: 'Achieng Odera', role: 'Nurse / clinician', ini: 'AO' }
+  ];
+  var NAV = [
+    { id: 'sell', label: 'Sell', icon: 'cart', roles: ['Owner', 'Cashier', 'Nurse / clinician'] },
+    { id: 'patients', label: 'Patients', icon: 'person', roles: ['Owner', 'Cashier', 'Nurse / clinician'] },
+    { id: 'stock', label: 'Stock', icon: 'box', roles: ['Owner', 'Cashier', 'Nurse / clinician'] },
+    { id: 'clock', label: 'Time clock', icon: 'clock', roles: ['Owner', 'Cashier', 'Nurse / clinician'] },
+    { id: 'reports', label: 'Reports', icon: 'chart', roles: ['Owner'], group: 'Manage' },
+    { id: 'staff', label: 'Staff and settings', icon: 'gear', roles: ['Owner'], group: 'Manage' }
+  ];
+  var MEDS = [
+    { id: 1, name: 'Paracetamol 500 mg', unit: 'tablet', strip: 10, pack: 100, price: { unit: 5, strip: 40, pack: 350 }, stock: 842, batch: 'PX2417', exp: 'Mar 2028', low: 200 },
+    { id: 2, name: 'Amoxicillin 500 mg', unit: 'capsule', strip: 10, pack: 100, price: { unit: 15, strip: 130, pack: 1200 }, stock: 560, batch: 'AM0931', exp: 'Nov 2027', low: 150 },
+    { id: 3, name: 'Artemether/Lumefantrine 20/120 mg', unit: 'tablet', pack: 24, price: { unit: 18, pack: 420 }, stock: 96, batch: 'AL5520', exp: 'Jun 2027', low: 120 },
+    { id: 4, name: 'Oral rehydration salts', unit: 'sachet', price: { unit: 30 }, stock: 140, batch: 'OR1102', exp: 'Aug 2028', low: 40 },
+    { id: 5, name: 'Cetirizine 10 mg', unit: 'tablet', strip: 10, price: { unit: 8, strip: 70 }, stock: 300, batch: 'CT7788', exp: 'Dec 2026', low: 100, soon: true },
+    { id: 6, name: 'Metronidazole 400 mg', unit: 'tablet', strip: 10, pack: 100, price: { unit: 6, strip: 50, pack: 450 }, stock: 410, batch: 'MT3350', exp: 'Jan 2028', low: 120 }
+  ];
+  var STOCKROWS = MEDS.map(function (m) { return { name: m.name, unit: m.unit, strip: m.strip, pack: m.pack, batch: m.batch, exp: m.exp, qty: m.stock, low: m.low, soon: m.soon, expired: false }; });
+  STOCKROWS.splice(1, 0, { name: 'Paracetamol 500 mg', unit: 'tablet', strip: 10, pack: 100, batch: 'PX2302', exp: 'Jan 2027', qty: 60, low: 200, soon: false, expired: false, second: true });
+  STOCKROWS.push({ name: 'Zinc sulphate 20 mg dispersible', unit: 'tablet', strip: 10, pack: 100, batch: 'ZN0099', exp: 'Sep 2026', qty: 40, low: 100, soon: false, expired: true });
+
+  var PATIENTS = [
+    { id: 1, name: 'Mary Atieno Odhiambo', age: '34 y', sex: 'Female', phone: '0712 345 678', nid: '28 114 902', allergy: 'Penicillin, reported by patient', cond: ['Hypertension'], wt: '62 kg', bp: '138/88', seen: '05 Oct 2026',
+      visits: [
+        { d: '05 Oct 2026', t: 'Consultation', n: 'Headache and dizziness for 3 days. BP 138/88. Advised rest, fluids and a repeat BP check in one week.', rx: 'Paracetamol 500 mg, 2 strips' },
+        { d: '14 Aug 2026', t: 'Dispensing', n: 'Repeat supply of blood pressure tablets.', rx: 'Amlodipine 5 mg, 30 tablets' }
+      ] },
+    { id: 2, name: 'John Kamau Mwangi', age: '52 y', sex: 'Male', phone: '0723 456 789', nid: '19 880 331', allergy: '', cond: ['Type 2 diabetes'], wt: '84 kg', bp: '126/80', seen: '02 Oct 2026',
+      visits: [{ d: '02 Oct 2026', t: 'Consultation', n: 'Routine diabetes review. Fasting glucose 7.4 mmol/L. Continue current treatment.', rx: 'Metformin 500 mg, 60 tablets' }] },
+    { id: 3, name: 'Faith Wambui', age: 'About 7 y', sex: 'Female', phone: '0734 567 890', nid: '', allergy: '', cond: [], wt: '21 kg', bp: 'Not taken', seen: '28 Sep 2026',
+      visits: [{ d: '28 Sep 2026', t: 'Consultation', n: 'Fever for 2 days, no cough. Malaria test positive.', rx: 'Artemether/Lumefantrine 20/120 mg, 1 pack' }] }
+  ];
+
+  var S = { tab: 'screens', screen: 'signin', user: null, pending: null, pin: '', cart: [], pay: 'cash', recv: '', mpesa: '', disc: 0, discBy: null, q: '', filter: 'all', ptab: 'visits', pid: 1, sheet: null, done: null, toast: '', receiptNo: 148, printed: false };
+  var toastTimer = null;
+
+  function factor(m, mode) { return mode === 'strip' ? m.strip : mode === 'pack' ? m.pack : 1; }
+  function modeLabel(m, mode) { return mode === 'unit' ? m.unit.charAt(0).toUpperCase() + m.unit.slice(1) : mode === 'strip' ? 'Strip' : 'Pack'; }
+  function defMode(m) { return ['strip', 'pack', 'unit'].filter(function (k) { return m.price[k] != null; })[0]; }
+  function modesOf(m) { return ['pack', 'strip', 'unit'].filter(function (k) { return m.price[k] != null; }); }
+  function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+  function breakdown(r) {
+    var q = r.qty, parts = [];
+    if (r.pack) { var p = Math.floor(q / r.pack); if (p) parts.push(plural(p, 'pack')); q -= p * r.pack; }
+    if (r.strip) { var s = Math.floor(q / r.strip); if (s) parts.push(plural(s, 'strip')); q -= s * r.strip; }
+    if (q) parts.push(plural(q, r.unit));
+    return parts.join(' + ');
+  }
+  function subtotal() { return S.cart.reduce(function (a, l) { var m = MEDS[l.id - 1]; return a + m.price[l.mode] * l.qty; }, 0); }
+  function total() { return Math.max(0, subtotal() - S.disc); }
+  function baseUsed(id) { return S.cart.reduce(function (a, l) { return l.id === id ? a + l.qty * factor(MEDS[id - 1], l.mode) : a; }, 0); }
+  function toast(msg) {
+    S.toast = msg; render();
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { S.toast = ''; render(); }, 2400);
+  }
+
+  /* ---------- screens ---------- */
+  function chrome(inner, solo) {
+    var u = S.user;
+    var nav = '';
+    if (!solo) {
+      var groupShown = false;
+      nav = NAV.filter(function (n) { return n.roles.indexOf(u.role) > -1; }).map(function (n) {
+        var head = '';
+        if (n.group && !groupShown) { groupShown = true; head = '<div class="cap">' + n.group + '</div>'; }
+        return head + '<button type="button" class="nav" data-act="nav" data-id="' + n.id + '"' + (S.screen === n.id ? ' aria-current="page"' : '') + '>' + ic(n.icon) + n.label + '</button>';
+      }).join('');
+    }
+    var side = solo ? '' :
+      '<aside class="side"><div class="brand"><span class="mark">' + ic('cross') + '</span>Emuktan</div>' + nav +
+      '<div class="me"><div class="who"><span class="av">' + u.ini + '</span><div><b>' + esc(u.name) + '</b><div class="small muted">' + u.role + '</div></div></div>' +
+      '<button type="button" class="btn sm" data-act="lock">' + ic('lock') + 'Switch user</button></div></aside>';
+    var status = '<div class="status"><span><i class="dot"></i>Works without internet</span><span>' + ic('cloud', 'style="width:14px;height:14px"') + 'Backed up today at 14:32</span><span>' + (u ? esc(u.name) + ' (' + u.role + ')' : 'Not signed in') + '</span></div>';
+    return '<div class="titlebar"><div class="t"><span class="mark" style="width:16px;height:16px;border-radius:4px">' + ic('cross', 'style="width:10px;height:10px"') + '</span>Emuktan Medical Services</div>' +
+      '<div class="wc"><span>' + ic('minus') + '</span><span>' + ic('square') + '</span><span>' + ic('x') + '</span></div></div>' +
+      '<div class="app' + (solo ? ' solo' : '') + '">' + side + inner + '</div>' + status +
+      (S.sheet ? sheetHtml() : '') + (S.toast ? '<div class="toast" role="status">' + ic('check') + esc(S.toast) + '</div>' : '');
+  }
+
+  function signinHtml() {
+    var body;
+    if (!S.pending) {
+      body = '<div class="mark" style="width:48px;height:48px;border-radius:14px">' + ic('cross', 'style="width:28px;height:28px"') + '</div>' +
+        '<div><h2>Who is working?</h2><p class="muted" style="margin-top:6px">Choose your name, then enter your PIN.</p></div>' +
+        '<div class="users">' + USERS.map(function (u) {
+          return '<button type="button" class="user" data-act="pick" data-id="' + u.id + '"><span class="av lg">' + u.ini + '</span><span><b style="font-size:15px">' + esc(u.name) + '</b><br><span class="muted small">' + u.role + '</span></span></button>';
+        }).join('') + '</div>';
+    } else {
+      var p = S.pending;
+      var dots = [0, 1, 2, 3].map(function (i) { return '<i class="' + (i < S.pin.length ? 'on' : '') + '"></i>'; }).join('');
+      var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(function (k) { return '<button type="button" data-act="key" data-k="' + k + '">' + k + '</button>'; }).join('') +
+        '<button type="button" class="fn" data-act="back">Back</button><button type="button" data-act="key" data-k="0">0</button><button type="button" class="fn" data-act="del">Delete</button>';
+      body = '<span class="av lg" style="width:72px;height:72px;font-size:24px">' + p.ini + '</span>' +
+        '<div><h2>' + esc(p.name) + '</h2><p class="muted" style="margin-top:6px">Enter your 4-digit PIN. In this mockup any 4 digits work.</p></div>' +
+        '<div class="dots" aria-label="' + S.pin.length + ' of 4 digits entered">' + dots + '</div><div class="pad">' + keys + '</div>';
+    }
+    return '<div class="signin"><div class="box">' + body + '</div></div>';
+  }
+
+  function sellHtml() {
+    return '<main class="page"><div class="ph"><h2>Sell</h2><div class="small muted">Sale R-' + String(S.receiptNo).padStart(6, '0') + ' · ' + esc(S.user.name) + '</div></div>' +
+      '<div class="sell"><div class="col">' +
+      '<div class="search">' + ic('search') + '<input class="input" id="q" autocomplete="off" placeholder="Scan a barcode or search for a medicine" value="' + esc(S.q) + '" aria-label="Search medicines"><kbd>Ctrl K</kbd></div>' +
+      '<div id="results"></div>' +
+      '<div class="card cart"><div class="hd cap"><span>Item</span><span>Sold by</span><span>Quantity</span><span class="num-r">Price</span><span></span></div><div class="body" id="cart"></div></div>' +
+      '</div><div class="card sum" id="summary"></div></div></main>';
+  }
+
+  function resultsHtml() {
+    var q = S.q.trim().toLowerCase();
+    var list = MEDS.filter(function (m) { return !q || m.name.toLowerCase().indexOf(q) > -1; });
+    if (!list.length) return '<div class="card empty"><b>No medicine matches "' + esc(S.q) + '"</b><span>Check the spelling, or scan the barcode on the pack.</span></div>';
+    return '<div class="tiles">' + list.map(function (m) {
+      var low = m.stock <= m.low;
+      var def = defMode(m);
+      var chip = m.soon ? '<span class="chip warn">' + ic('warn') + 'Expires ' + m.exp + '</span>' : low ? '<span class="chip warn">' + ic('warn') + 'Low stock</span>' : '<span class="chip">' + m.stock + ' ' + m.unit + 's</span>';
+      return '<button type="button" class="tile" data-act="add" data-id="' + m.id + '"><b>' + esc(m.name) + '</b><div class="row"><span class="small muted">' + fmt(m.price[def]) + ' per ' + def.replace('unit', m.unit) + '</span>' + chip + '</div></button>';
+    }).join('') + '</div>';
+  }
+
+  function cartHtml() {
+    if (!S.cart.length) return '<div class="empty" style="padding-block:40px"><b>No items yet</b><span>Scan a barcode or click a medicine above to start this sale.</span></div>';
+    return S.cart.map(function (l, i) {
+      var m = MEDS[l.id - 1], f = factor(m, l.mode), base = l.qty * f, left = m.stock - baseUsed(l.id);
+      var modes = modesOf(m);
+      var seg = modes.length > 1 ? '<div class="mini" role="group" aria-label="Sold by">' + modes.map(function (k) { return '<button type="button" data-act="mode" data-i="' + i + '" data-m="' + k + '" aria-pressed="' + (k === l.mode) + '">' + modeLabel(m, k) + '</button>'; }).join('') + '</div>' : '<span class="small muted">' + modeLabel(m, l.mode) + ' only</span>';
+      var detail = l.mode === 'unit' ? plural(l.qty, m.unit) : plural(l.qty, l.mode) + ' = ' + plural(base, m.unit);
+      return '<div class="line"><div class="nm"><b>' + esc(m.name) + '</b><span class="small muted">Batch ' + m.batch + ' · expires ' + m.exp + ' · ' + detail + '</span></div>' +
+        '<div>' + seg + '</div>' +
+        '<div class="step"><button type="button" aria-label="Decrease" data-act="qty" data-i="' + i + '" data-d="-1">' + ic('minus') + '</button><span>' + l.qty + '</span><button type="button" aria-label="Increase" data-act="qty" data-i="' + i + '" data-d="1"' + (left < f ? ' disabled' : '') + '>' + ic('plus') + '</button></div>' +
+        '<b class="num-r">' + fmt(m.price[l.mode] * l.qty) + '</b>' +
+        '<button type="button" class="btn plain icon-btn" style="width:32px;height:32px;color:var(--text2)" aria-label="Remove ' + esc(m.name) + '" data-act="rm" data-i="' + i + '">' + ic('x') + '</button></div>';
+    }).join('');
+  }
+
+  function canCharge() {
+    if (!S.cart.length) return { ok: false, why: 'Add an item to start a sale.' };
+    if (S.pay === 'cash') {
+      var r = parseInt(String(S.recv).replace(/\D/g, ''), 10) || 0;
+      if (r < total()) return { ok: false, why: r ? 'Amount received is ' + fmt(total() - r) + ' short.' : 'Enter the amount received.' };
+    } else if (S.mpesa.trim().length < 10) {
+      return { ok: false, why: 'Enter the 10-character M-Pesa code.' };
+    }
+    return { ok: true, why: '' };
+  }
+
+  function summaryHtml() {
+    var t = total(), c = canCharge();
+    var disc = S.disc ? '<div class="r"><span>Discount</span><span style="color:var(--success);font-weight:600">- ' + fmt(S.disc) + '</span></div><div class="r small muted"><span>Approved by ' + esc(S.discBy) + '</span><button type="button" class="btn plain sm" data-act="rmdisc">Remove</button></div>'
+      : '<div class="r"><span class="muted">Discount</span><button type="button" class="btn plain sm" data-act="disc"' + (S.cart.length ? '' : ' disabled') + '>Add discount</button></div>';
+    var pay;
+    if (S.pay === 'cash') {
+      var r = parseInt(String(S.recv).replace(/\D/g, ''), 10) || 0;
+      pay = '<label class="field"><span>Amount received</span><input class="input num" id="recv" inputmode="numeric" placeholder="0" value="' + (S.recv ? Number(S.recv).toLocaleString('en-KE') : '') + '" style="height:48px;font-size:18px"></label>' +
+        '<div class="quick"><button type="button" class="btn sm" data-act="quick" data-v="' + t + '">Exact</button>' + [500, 1000, 2000].map(function (v) { return '<button type="button" class="btn sm" data-act="quick" data-v="' + v + '">' + v.toLocaleString('en-KE') + '</button>'; }).join('') + '</div>' +
+        '<div class="r"><span class="muted">Change due</span><b style="font-size:20px" id="change">' + (r >= t && t > 0 ? fmt(r - t) : 'KES 0') + '</b></div>';
+    } else {
+      pay = '<label class="field"><span>M-Pesa transaction code</span><input class="input" id="mp" maxlength="10" placeholder="For example SGH7K2L9QX" value="' + esc(S.mpesa) + '" style="height:48px;font-size:18px;text-transform:uppercase;font-family:var(--mono)"></label>' +
+        '<p class="small muted">Read the code from the customer\'s confirmation message.</p>';
+    }
+    return '<div class="r"><span class="cap">Patient</span><span class="chip info">Walk-in</span></div><hr class="hr">' +
+      '<div class="r"><span class="muted">Subtotal</span><span>' + fmt(subtotal()) + '</span></div>' + disc +
+      '<hr class="hr"><div class="r"><span class="cap">Total</span><span class="total" id="tot">' + fmt(t) + '</span></div>' +
+      '<div class="seg big" role="group" aria-label="Payment method"><button type="button" data-act="pay" data-m="cash" aria-pressed="' + (S.pay === 'cash') + '">Cash</button><button type="button" data-act="pay" data-m="mpesa" aria-pressed="' + (S.pay === 'mpesa') + '">M-Pesa</button></div>' + pay +
+      '<div style="margin-top:auto;display:grid;gap:8px"><button type="button" class="btn primary lg" id="charge" data-act="charge"' + (c.ok ? '' : ' disabled') + '>Charge ' + fmt(t) + '</button><div class="why" id="why">' + c.why + '</div></div>';
+  }
+
+  function patientsHtml() {
+    var p = PATIENTS[S.pid - 1];
+    var list = PATIENTS.map(function (x) {
+      var ini = x.name.split(' ').map(function (w) { return w[0]; }).slice(0, 2).join('');
+      return '<button type="button" class="prow" data-act="selpat" data-id="' + x.id + '"' + (x.id === S.pid ? ' aria-current="true"' : '') + '><span class="av">' + ini + '</span><span><b>' + esc(x.name) + '</b><br><span class="small muted">' + x.age + ' · last seen ' + x.seen + '</span></span></button>';
+    }).join('');
+    var visits = p.visits.map(function (v) {
+      return '<div class="visit"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>' + v.t + '</b><span class="small muted">' + v.d + '</span></div><div>' + esc(v.n) + '</div><div class="small muted">Dispensed: ' + esc(v.rx) + '</div></div>';
+    }).join('');
+    var main = S.ptab === 'visits' ? '<div class="card">' + visits + '</div>' :
+      '<div class="card" style="padding:16px;display:grid;gap:12px"><label class="field"><span>Consultation note</span><textarea class="input" id="note" placeholder="Symptoms, findings and advice"></textarea></label>' +
+      '<div class="vit"><label class="field"><span>Weight (kg)</span><input class="input" id="wt" value="' + parseFloat(p.wt) + '"></label><label class="field"><span>BP top</span><input class="input" id="bp1" placeholder="120"></label><label class="field"><span>BP bottom</span><input class="input" id="bp2" placeholder="80"></label></div>' +
+      '<div style="display:flex;justify-content:flex-end;gap:10px"><button type="button" class="btn" data-act="ptab" data-t="visits">Cancel</button><button type="button" class="btn primary" data-act="savenote">Save note</button></div></div>';
+    return '<main class="page"><div class="ph"><h2>Patients</h2><div style="display:flex;gap:10px"><div class="search" style="width:260px">' + ic('search') + '<input class="input" id="pq" placeholder="Search by name or phone" aria-label="Search patients" style="height:40px;padding-left:38px"></div><button type="button" class="btn primary" data-act="newpat">' + ic('plus') + 'New patient</button></div></div>' +
+      '<div class="split"><div class="card plist">' + list + '</div><div class="col" style="overflow:auto"><div class="card" style="padding:16px;display:grid;gap:14px">' +
+      '<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><div><h3 style="font-size:20px;font-weight:600">' + esc(p.name) + '</h3><div class="muted">' + p.sex + ' · ' + p.age + ' · ' + p.phone + (p.nid ? ' · ID ' + p.nid : '') + '</div></div><div style="display:flex;gap:6px;flex-wrap:wrap">' + (p.cond.map(function (c) { return '<span class="chip info">' + esc(c) + '</span>'; }).join('')) + '</div></div>' +
+      (p.allergy ? '<div class="banner" role="alert">' + ic('warn') + '<div><b>Allergies:</b> ' + esc(p.allergy) + '</div></div>' : '<div class="small muted">No allergies recorded.</div>') +
+      '<div class="vit"><div><span class="small muted">Weight</span><b>' + p.wt + '</b></div><div><span class="small muted">Blood pressure</span><b>' + p.bp + '</b></div><div><span class="small muted">Last visit</span><b>' + p.seen + '</b></div></div></div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px"><div class="seg" role="group" aria-label="Patient view"><button type="button" data-act="ptab" data-t="visits" aria-pressed="' + (S.ptab === 'visits') + '">Visit history</button><button type="button" data-act="ptab" data-t="note" aria-pressed="' + (S.ptab === 'note') + '">New consultation</button></div></div>' +
+      main + '</div></div></main>';
+  }
+
+  function stockHtml() {
+    var rows = STOCKROWS.filter(function (r) {
+      var low = r.qty <= r.low;
+      return S.filter === 'all' || (S.filter === 'low' && low) || (S.filter === 'exp' && (r.soon || r.expired));
+    });
+    var body = rows.map(function (r) {
+      var st = r.expired ? '<span class="chip bad">' + ic('x') + 'Expired. Do not sell</span>' : r.soon ? '<span class="chip warn">' + ic('warn') + 'Expires ' + r.exp + '</span>' : r.qty <= r.low ? '<span class="chip warn">' + ic('warn') + 'Low stock</span>' : '<span class="chip ok">' + ic('check') + 'In stock</span>';
+      return '<tr><td><b>' + esc(r.name) + '</b>' + (r.second ? '<div class="small muted">Sold after the batch that expires first</div>' : '') + '</td><td style="font-family:var(--mono);font-size:13px">' + r.batch + '</td><td>' + r.exp + '</td><td class="r"><b>' + r.qty.toLocaleString('en-KE') + '</b> ' + r.unit + 's<div class="small muted">' + breakdown(r) + '</div></td><td>' + st + '</td></tr>';
+    }).join('');
+    var counts = { all: STOCKROWS.length, low: STOCKROWS.filter(function (r) { return r.qty <= r.low; }).length, exp: STOCKROWS.filter(function (r) { return r.soon || r.expired; }).length };
+    return '<main class="page"><div class="ph"><h2>Stock</h2><div style="display:flex;gap:10px"><button type="button" class="btn" data-act="adjust">Adjust stock</button><button type="button" class="btn primary" data-act="receive">' + ic('plus') + 'Receive stock</button></div></div>' +
+      '<div class="seg" role="group" aria-label="Filter" style="justify-self:start;width:fit-content">' + [['all', 'All'], ['low', 'Low stock'], ['exp', 'Expiring or expired']].map(function (f) { return '<button type="button" data-act="filter" data-f="' + f[0] + '" aria-pressed="' + (S.filter === f[0]) + '">' + f[1] + ' <span class="muted">' + counts[f[0]] + '</span></button>'; }).join('') + '</div>' +
+      '<div class="card tbl-scroll"><table class="tbl"><thead><tr><th>Medicine</th><th>Batch</th><th>Expiry</th><th class="r">On hand</th><th>Status</th></tr></thead><tbody>' + (body || '<tr><td colspan="5"><div class="empty">Nothing to show here.</div></td></tr>') + '</tbody></table></div></main>';
+  }
+
+  function soonHtml(title, text) {
+    return '<main class="page"><div class="ph"><h2>' + title + '</h2></div><div class="card empty" style="padding-block:56px"><b style="font-size:20px">' + title + ' is designed after this direction is approved</b><span style="max-width:46ch">' + text + '</span></div></main>';
+  }
+
+  function sheetHtml() {
+    var sh = S.sheet;
+    if (sh === 'disc') {
+      var isClin = S.user.role === 'Nurse / clinician';
+      return '<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t" data-stop="1"><div><h3 id="sh-t">Add a discount</h3><p class="muted" style="margin-top:6px">' + (isClin ? 'Enter the amount to take off this sale.' : 'Discounts need a clinician. Enter the amount, then ask a clinician to type their PIN.') + '</p></div>' +
+        '<label class="field"><span>Discount in KES</span><input class="input num" id="d-amt" inputmode="numeric" placeholder="0"></label>' +
+        (isClin ? '' : '<label class="field"><span>Clinician PIN</span><input class="input" id="d-pin" type="password" inputmode="numeric" maxlength="4" placeholder="4 digits"></label>') +
+        '<div class="acts"><button type="button" class="btn" data-act="close">Cancel</button><button type="button" class="btn primary" id="d-ok" data-act="applydisc" disabled>Apply discount</button></div></div></div>';
+    }
+    if (sh === 'done') {
+      var d = S.done;
+      return '<div class="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t" style="justify-items:center;text-align:center"><span class="bigcheck">' + ic('check') + '</span><div><h3 id="sh-t">Sale complete</h3><p class="muted" style="margin-top:6px">Receipt R-' + String(d.no).padStart(6, '0') + ' · ' + d.method + '</p></div>' +
+        '<div style="display:grid;gap:2px"><span class="muted small">' + (d.method === 'Cash' ? 'Change due' : 'Total paid') + '</span><span class="total">' + fmt(d.method === 'Cash' ? d.change : d.total) + '</span></div>' +
+        '<div class="acts" style="width:100%;justify-content:center"><button type="button" class="btn" data-act="print">' + ic('print') + (S.printed ? 'Printed' : 'Print receipt') + '</button><button type="button" class="btn primary" data-act="newsale">New sale</button></div></div></div>';
+    }
+    if (sh === 'receive') {
+      return '<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t" data-stop="1"><div><h3 id="sh-t">Receive stock</h3><p class="muted" style="margin-top:6px">Record a delivery. Each delivery needs a batch number and expiry date.</p></div>' +
+        '<label class="field"><span>Medicine</span><input class="input" placeholder="Search medicines"></label><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label class="field"><span>Batch number</span><input class="input"></label><label class="field"><span>Expiry (month and year)</span><input class="input" placeholder="MM / YYYY"></label></div>' +
+        '<div class="acts"><button type="button" class="btn" data-act="close">Cancel</button><button type="button" class="btn primary" data-act="close">Receive stock</button></div></div></div>';
+    }
+    return '';
+  }
+
+  /* ---------- render ---------- */
+  function picker() {
+    var items = [['signin', 'Sign in'], ['sell', 'Sell'], ['patients', 'Patients'], ['stock', 'Stock']];
+    $('#picker').innerHTML = items.map(function (i) { return '<button type="button" data-act="screen" data-s="' + i[0] + '" aria-pressed="' + (S.screen === i[0]) + '">' + i[1] + '</button>'; }).join('');
+  }
+
+  function render() {
+    if (S.tab !== 'screens') return;
+    picker();
+    var win = $('#win');
+    var focusId = document.activeElement && win.contains(document.activeElement) ? document.activeElement.id : '';
+    var selStart = focusId && document.activeElement.selectionStart;
+    var inner;
+    if (S.screen === 'signin' || !S.user) { inner = signinHtml(); win.innerHTML = chrome(inner, true); }
+    else {
+      inner = S.screen === 'sell' ? sellHtml() : S.screen === 'patients' ? patientsHtml() : S.screen === 'stock' ? stockHtml() :
+        S.screen === 'reports' ? soonHtml('Reports', 'Daily and weekly sales, profit and stock for the owner.') :
+        S.screen === 'staff' ? soonHtml('Staff and settings', 'Users, roles, PIN resets, business details and backup status.') :
+        soonHtml('Time clock', 'Clock in and out, with a simple log per person.');
+      win.innerHTML = chrome(inner, false);
+      if (S.screen === 'sell') { $('#results').innerHTML = resultsHtml(); $('#cart').innerHTML = cartHtml(); $('#summary').innerHTML = summaryHtml(); }
+    }
+    if (focusId) { var el = document.getElementById(focusId); if (el) { el.focus(); try { el.setSelectionRange(selStart, selStart); } catch (e) {} } }
+  }
+
+  function goto(screen) {
+    if (screen !== 'signin' && !S.user) S.user = USERS[1];
+    S.screen = screen; S.sheet = null;
+    render();
+    if (screen === 'sell') { var q = $('#q'); if (q) q.focus(); }
+  }
+
+  function addItem(id) {
+    var m = MEDS[id - 1]; if (!m) return;
+    if (m.stock - baseUsed(id) < 1) return;
+    var mode = defMode(m);
+    var ex = S.cart.filter(function (l) { return l.id === id && l.mode === mode; })[0];
+    if (ex) { if (m.stock - baseUsed(id) >= factor(m, mode)) ex.qty++; } else if (m.stock - baseUsed(id) >= factor(m, mode)) S.cart.push({ id: id, mode: mode, qty: 1 });
+    S.disc = 0; S.discBy = null;
+    render();
+  }
+
+  function act(a, d, el) {
+    switch (a) {
+      case 'tab': S.tab = d.t; $('#tab-screens').setAttribute('aria-pressed', d.t === 'screens'); $('#tab-system').setAttribute('aria-pressed', d.t === 'system'); $('#v-screens').hidden = d.t !== 'screens'; $('#v-system').hidden = d.t !== 'system'; if (d.t === 'screens') render(); else swatches(); break;
+      case 'screen': if (d.s === 'signin') { S.user = null; S.pending = null; S.pin = ''; } goto(d.s); break;
+      case 'pick': S.pending = USERS[d.id - 1]; S.pin = ''; render(); break;
+      case 'key': if (S.pin.length < 4) S.pin += d.k; if (S.pin.length === 4) { S.user = S.pending; S.pending = null; S.pin = ''; goto('sell'); } else render(); break;
+      case 'del': S.pin = S.pin.slice(0, -1); render(); break;
+      case 'back': S.pending = null; S.pin = ''; render(); break;
+      case 'lock': S.user = null; S.pending = null; S.pin = ''; S.screen = 'signin'; render(); break;
+      case 'nav': goto(d.id); break;
+      case 'add': addItem(+d.id); break;
+      case 'mode': var l = S.cart[+d.i], m = MEDS[l.id - 1]; l.mode = d.m; l.qty = 1; while (m.stock - baseUsed(l.id) < 0 && l.qty > 0) l.qty--; if (l.qty < 1) l.qty = 1; S.disc = 0; S.discBy = null; render(); break;
+      case 'qty': var ln = S.cart[+d.i]; ln.qty += +d.d; if (ln.qty < 1) S.cart.splice(+d.i, 1); S.disc = 0; S.discBy = null; render(); break;
+      case 'rm': S.cart.splice(+d.i, 1); S.disc = 0; S.discBy = null; render(); break;
+      case 'pay': S.pay = d.m; render(); if (d.m === 'cash') { var r = $('#recv'); if (r) r.focus(); } else { var mp = $('#mp'); if (mp) mp.focus(); } break;
+      case 'quick': S.recv = String(d.v); render(); break;
+      case 'disc': S.sheet = 'disc'; render(); setTimeout(function () { var x = $('#d-amt'); if (x) x.focus(); }, 0); break;
+      case 'close': S.sheet = null; render(); break;
+      case 'applydisc': var amt = parseInt(($('#d-amt').value || '').replace(/\D/g, ''), 10) || 0; S.disc = Math.min(amt, subtotal()); S.discBy = S.user.role === 'Nurse / clinician' ? S.user.name : 'Achieng Odera (clinician)'; S.sheet = null; render(); toast('Discount applied'); break;
+      case 'rmdisc': S.disc = 0; S.discBy = null; render(); break;
+      case 'charge':
+        var t = total(), rv = parseInt(String(S.recv).replace(/\D/g, ''), 10) || 0;
+        S.done = { no: S.receiptNo, total: t, change: Math.max(0, rv - t), method: S.pay === 'cash' ? 'Cash' : 'M-Pesa' }; S.sheet = 'done'; S.printed = false; render(); break;
+      case 'print': S.printed = true; render(); toast('Sent to the receipt printer'); break;
+      case 'newsale': S.cart = []; S.recv = ''; S.mpesa = ''; S.disc = 0; S.discBy = null; S.q = ''; S.sheet = null; S.receiptNo++; render(); var q = $('#q'); if (q) q.focus(); break;
+      case 'selpat': S.pid = +d.id; S.ptab = 'visits'; render(); break;
+      case 'ptab': S.ptab = d.t; render(); break;
+      case 'newpat': toast('New patient form opens here'); break;
+      case 'savenote':
+        var txt = ($('#note').value || '').trim();
+        if (!txt) { toast('Write a note before saving'); break; }
+        PATIENTS[S.pid - 1].visits.unshift({ d: '07 Oct 2026', t: 'Consultation', n: txt, rx: 'Nothing dispensed yet' }); PATIENTS[S.pid - 1].seen = '07 Oct 2026'; S.ptab = 'visits'; render(); toast('Consultation note saved'); break;
+      case 'filter': S.filter = d.f; render(); break;
+      case 'receive': S.sheet = 'receive'; render(); break;
+      case 'adjust': toast('Adjust stock opens here, with a reason for every change'); break;
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]');
+    if (!b) return;
+    if (b.classList.contains('scrim') && e.target !== b) return;
+    if (b.dataset.act === 'close' && b.classList.contains('scrim') && e.target !== b) return;
+    act(b.dataset.act, b.dataset, b);
+  });
+
+  document.addEventListener('input', function (e) {
+    var id = e.target.id;
+    if (id === 'q') { S.q = e.target.value; $('#results').innerHTML = resultsHtml(); }
+    else if (id === 'recv') {
+      var digits = e.target.value.replace(/\D/g, ''); S.recv = digits;
+      e.target.value = digits ? Number(digits).toLocaleString('en-KE') : '';
+      var r = parseInt(digits, 10) || 0, t = total(), c = canCharge();
+      $('#change').textContent = r >= t && t > 0 ? fmt(r - t) : 'KES 0';
+      $('#charge').disabled = !c.ok; $('#why').textContent = c.why;
+    } else if (id === 'mp') {
+      S.mpesa = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); e.target.value = S.mpesa;
+      var c2 = canCharge(); $('#charge').disabled = !c2.ok; $('#why').textContent = c2.why;
+    } else if (id === 'd-amt' || id === 'd-pin') {
+      var a = parseInt(($('#d-amt').value || '').replace(/\D/g, ''), 10) || 0;
+      var pinNeeded = !!$('#d-pin'); var pinOk = !pinNeeded || ($('#d-pin').value || '').length === 4;
+      $('#d-ok').disabled = !(a > 0 && a <= subtotal() && pinOk);
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (S.tab !== 'screens') return;
+    if (e.key === 'Escape' && S.sheet && S.sheet !== 'done') { S.sheet = null; render(); return; }
+    if (S.pending && /^[0-9]$/.test(e.key)) { act('key', { k: e.key }); return; }
+    if (S.pending && e.key === 'Backspace') { act('del', {}); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && S.screen === 'sell') { e.preventDefault(); var q = $('#q'); if (q) { q.focus(); q.select(); } return; }
+    if (e.key === 'Enter' && e.target.id === 'q') {
+      var q2 = S.q.trim().toLowerCase();
+      var hit = MEDS.filter(function (m) { return !q2 || m.name.toLowerCase().indexOf(q2) > -1; })[0];
+      if (hit && q2) { addItem(hit.id); S.q = ''; var qi = $('#q'); if (qi) { qi.value = ''; qi.focus(); } $('#results').innerHTML = resultsHtml(); }
+    }
+  });
+
+  /* ---------- system tab: live swatches ---------- */
+  var TOKENS = [['Window', '--window'], ['Surface', '--surface'], ['Sidebar', '--sidebar'], ['Separator', '--sep'], ['Text', '--text'], ['Text secondary', '--text2'], ['Text tertiary', '--text3'], ['Accent', '--accent'], ['Accent soft', '--accent-soft'], ['Success', '--success'], ['Warning', '--warning'], ['Critical', '--critical']];
+  function swatches() {
+    var cs = getComputedStyle(document.documentElement);
+    $('#swatches').innerHTML = TOKENS.map(function (t) { var v = cs.getPropertyValue(t[1]).trim().toUpperCase(); return '<div><i style="background:var(' + t[1] + ')"></i><span><b>' + t[0] + '</b><code>' + v + '</code></span></div>'; }).join('');
+  }
+  if (window.matchMedia) { var mq = window.matchMedia('(prefers-color-scheme: dark)'); (mq.addEventListener ? mq.addEventListener.bind(mq, 'change') : mq.addListener.bind(mq))(function () { if (S.tab === 'system') swatches(); }); }
+  new MutationObserver(function () { if (S.tab === 'system') swatches(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  render();
+})();
+</script>
+
+</body>
+</html>

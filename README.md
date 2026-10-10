@@ -26,3 +26,8 @@ file; see `lib/data` (schema) and `lib/core` (key handling).
 ## Conventions
 - Money: integer cents. Stock: integer base units (e.g. tablets), as a ledger of
   `stock_movements`; stock on hand is a SUM, never a stored number.
+
+## Branding and shop settings
+- Name, accent colours and logo: `lib/config/brand.dart` (logo goes in `assets/brand/`).
+- PIN rules, auto-lock time, receipt paper width: `lib/config/app_config.dart`.
+- Design tokens (spacing, type, status colours): `lib/ui/theme/app_tokens.dart`.

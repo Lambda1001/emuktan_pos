@@ -23,8 +23,11 @@ class AppContext {
 
 /// Opens the encrypted database, creating the key on first run.
 Future<AppContext> bootstrap({Directory? dataDir, KeyStore? keyStore}) async {
-  final dir = dataDir ??
-      Directory(p.join((await getApplicationSupportDirectory()).path, 'Emuktan'));
+  final dir =
+      dataDir ??
+      Directory(
+        p.join((await getApplicationSupportDirectory()).path, 'Emuktan'),
+      );
   await dir.create(recursive: true);
   final store = keyStore ?? DpapiKeyStore(File(p.join(dir.path, 'db.key')));
   final loaded = await store.loadOrCreate();

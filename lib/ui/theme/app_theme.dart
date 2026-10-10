@@ -11,14 +11,17 @@ ThemeData buildTheme(Brightness brightness) {
     secondary: c.accent,
     onSecondary: c.onAccent,
     error: c.critical,
-    onError: brightness == Brightness.light ? Colors.white : const Color(0xFF1A0505),
+    onError: brightness == Brightness.light
+        ? Colors.white
+        : const Color(0xFF1A0505),
     surface: c.surface,
     onSurface: c.text,
     outline: c.separator,
     outlineVariant: c.separator,
   );
 
-  TextStyle t(double size, FontWeight w, {Color? color, double? height}) => TextStyle(
+  TextStyle t(double size, FontWeight w, {Color? color, double? height}) =>
+      TextStyle(
         fontFamily: TypeScale.fontFallback.first,
         fontFamilyFallback: TypeScale.fontFallback,
         fontSize: size,
@@ -41,9 +44,12 @@ ThemeData buildTheme(Brightness brightness) {
     displaySmall: t(TypeScale.amount, FontWeight.w700, height: 1.1),
   );
 
-  final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.control));
+  final shape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(Radii.control),
+  );
   const minSize = Size(64, Hit.standard);
-  OutlineInputBorder border(Color color, [double width = 1]) => OutlineInputBorder(
+  OutlineInputBorder border(Color color, [double width = 1]) =>
+      OutlineInputBorder(
         borderRadius: BorderRadius.circular(Radii.control),
         borderSide: BorderSide(color: color, width: width),
       );
@@ -88,7 +94,10 @@ ThemeData buildTheme(Brightness brightness) {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: c.surface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: Space.md, vertical: Space.md),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: Space.md,
+        vertical: Space.md,
+      ),
       hintStyle: t(TypeScale.body, FontWeight.w400, color: c.textTertiary),
       border: border(c.separator),
       enabledBorder: border(c.separator),
@@ -107,11 +116,16 @@ ThemeData buildTheme(Brightness brightness) {
     dialogTheme: DialogThemeData(
       backgroundColor: c.surface,
       elevation: 8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.sheet)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Radii.sheet),
+      ),
     ),
     dividerTheme: DividerThemeData(color: c.separator, thickness: 1, space: 1),
     tooltipTheme: TooltipThemeData(
-      decoration: BoxDecoration(color: c.text, borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(
+        color: c.text,
+        borderRadius: BorderRadius.circular(6),
+      ),
       textStyle: t(TypeScale.caption, FontWeight.w500, color: c.surface),
     ),
   );

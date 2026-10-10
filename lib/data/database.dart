@@ -23,30 +23,31 @@ class WrongDatabaseKeyException implements Exception {
   String toString() => 'The database key is wrong, or the file is corrupt.';
 }
 
-@DriftDatabase(tables: [
-  Users,
-  Patients,
-  Visits,
-  Consultations,
-  Medicines,
-  Batches,
-  StockMovements,
-  Sales,
-  SaleItems,
-  Payments,
-  ClockEntries,
-  Settings,
-  SyncOutbox,
-])
+@DriftDatabase(
+  tables: [
+    Users,
+    Patients,
+    Visits,
+    Consultations,
+    Medicines,
+    Batches,
+    StockMovements,
+    Sales,
+    SaleItems,
+    Payments,
+    ClockEntries,
+    Settings,
+    SyncOutbox,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   /// Opens (creating if needed) the encrypted database at [file].
   factory AppDatabase.encrypted(File file, List<int> key) {
-    return AppDatabase(NativeDatabase(
-      file,
-      setup: (raw) => applyKey(raw, key),
-    ));
+    return AppDatabase(
+      NativeDatabase(file, setup: (raw) => applyKey(raw, key)),
+    );
   }
 
   @override
@@ -54,11 +55,11 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
-        beforeOpen: (details) async {
-          await customStatement('PRAGMA foreign_keys = ON');
-        },
-      );
+    onCreate: (m) => m.createAll(),
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 
   /// Writes an encrypted snapshot of the live database to [path].
   /// The file is encrypted with the same key (SQLCipher VACUUM INTO).

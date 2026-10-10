@@ -11,14 +11,46 @@ final class _DataBlob extends Struct {
   external Pointer<Uint8> pbData;
 }
 
-typedef _ProtectC = Int32 Function(Pointer<_DataBlob>, Pointer<Utf16>,
-    Pointer<_DataBlob>, Pointer<Void>, Pointer<Void>, Uint32, Pointer<_DataBlob>);
-typedef _ProtectD = int Function(Pointer<_DataBlob>, Pointer<Utf16>,
-    Pointer<_DataBlob>, Pointer<Void>, Pointer<Void>, int, Pointer<_DataBlob>);
-typedef _UnprotectC = Int32 Function(Pointer<_DataBlob>, Pointer<Pointer<Utf16>>,
-    Pointer<_DataBlob>, Pointer<Void>, Pointer<Void>, Uint32, Pointer<_DataBlob>);
-typedef _UnprotectD = int Function(Pointer<_DataBlob>, Pointer<Pointer<Utf16>>,
-    Pointer<_DataBlob>, Pointer<Void>, Pointer<Void>, int, Pointer<_DataBlob>);
+typedef _ProtectC =
+    Int32 Function(
+      Pointer<_DataBlob>,
+      Pointer<Utf16>,
+      Pointer<_DataBlob>,
+      Pointer<Void>,
+      Pointer<Void>,
+      Uint32,
+      Pointer<_DataBlob>,
+    );
+typedef _ProtectD =
+    int Function(
+      Pointer<_DataBlob>,
+      Pointer<Utf16>,
+      Pointer<_DataBlob>,
+      Pointer<Void>,
+      Pointer<Void>,
+      int,
+      Pointer<_DataBlob>,
+    );
+typedef _UnprotectC =
+    Int32 Function(
+      Pointer<_DataBlob>,
+      Pointer<Pointer<Utf16>>,
+      Pointer<_DataBlob>,
+      Pointer<Void>,
+      Pointer<Void>,
+      Uint32,
+      Pointer<_DataBlob>,
+    );
+typedef _UnprotectD =
+    int Function(
+      Pointer<_DataBlob>,
+      Pointer<Pointer<Utf16>>,
+      Pointer<_DataBlob>,
+      Pointer<Void>,
+      Pointer<Void>,
+      int,
+      Pointer<_DataBlob>,
+    );
 typedef _LocalFreeC = Pointer<Void> Function(Pointer<Void>);
 typedef _LocalFreeD = Pointer<Void> Function(Pointer<Void>);
 
@@ -34,24 +66,34 @@ class Dpapi {
 
   static final _crypt32 = DynamicLibrary.open('crypt32.dll');
   static final _kernel32 = DynamicLibrary.open('kernel32.dll');
-  static final _protect =
-      _crypt32.lookupFunction<_ProtectC, _ProtectD>('CryptProtectData');
-  static final _unprotect =
-      _crypt32.lookupFunction<_UnprotectC, _UnprotectD>('CryptUnprotectData');
-  static final _localFree =
-      _kernel32.lookupFunction<_LocalFreeC, _LocalFreeD>('LocalFree');
+  static final _protect = _crypt32.lookupFunction<_ProtectC, _ProtectD>(
+    'CryptProtectData',
+  );
+  static final _unprotect = _crypt32.lookupFunction<_UnprotectC, _UnprotectD>(
+    'CryptUnprotectData',
+  );
+  static final _localFree = _kernel32.lookupFunction<_LocalFreeC, _LocalFreeD>(
+    'LocalFree',
+  );
 
   // CRYPTPROTECT_UI_FORBIDDEN: never show a prompt.
   static const _uiForbidden = 0x1;
 
-  static Uint8List protect(Uint8List data) =>
-      _run(data, (i, o) => _protect(i, nullptr, nullptr, nullptr, nullptr, _uiForbidden, o));
+  static Uint8List protect(Uint8List data) => _run(
+    data,
+    (i, o) => _protect(i, nullptr, nullptr, nullptr, nullptr, _uiForbidden, o),
+  );
 
-  static Uint8List unprotect(Uint8List data) =>
-      _run(data, (i, o) => _unprotect(i, nullptr, nullptr, nullptr, nullptr, _uiForbidden, o));
+  static Uint8List unprotect(Uint8List data) => _run(
+    data,
+    (i, o) =>
+        _unprotect(i, nullptr, nullptr, nullptr, nullptr, _uiForbidden, o),
+  );
 
-  static Uint8List _run(Uint8List data,
-      int Function(Pointer<_DataBlob>, Pointer<_DataBlob>) call) {
+  static Uint8List _run(
+    Uint8List data,
+    int Function(Pointer<_DataBlob>, Pointer<_DataBlob>) call,
+  ) {
     final inBlob = calloc<_DataBlob>();
     final outBlob = calloc<_DataBlob>();
     final buf = calloc<Uint8>(data.length);
@@ -64,7 +106,8 @@ class Dpapi {
         throw DpapiException('Windows DPAPI call failed');
       }
       final result = Uint8List.fromList(
-          outBlob.ref.pbData.asTypedList(outBlob.ref.cbData));
+        outBlob.ref.pbData.asTypedList(outBlob.ref.cbData),
+      );
       _localFree(outBlob.ref.pbData.cast());
       return result;
     } finally {

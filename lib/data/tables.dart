@@ -97,6 +97,7 @@ class Medicines extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+@DataClassName('Batch')
 class Batches extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get medicineId => integer().references(Medicines, #id)();
@@ -110,8 +111,8 @@ class Batches extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {medicineId, batchNumber},
-      ];
+    {medicineId, batchNumber},
+  ];
 }
 
 class StockMovements extends Table {

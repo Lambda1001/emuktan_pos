@@ -59,6 +59,8 @@ Uint8List parseRecoveryKey(String text) {
   if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(hex)) {
     throw const FormatException('A recovery key is 64 hexadecimal characters.');
   }
-  return Uint8List.fromList(
-      [for (var i = 0; i < 64; i += 2) int.parse(hex.substring(i, i + 2), radix: 16)]);
+  return Uint8List.fromList([
+    for (var i = 0; i < 64; i += 2)
+      int.parse(hex.substring(i, i + 2), radix: 16),
+  ]);
 }

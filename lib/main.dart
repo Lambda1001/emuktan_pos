@@ -1,68 +1,87 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app_state.dart';
+import 'config/brand.dart';
 import 'core/bootstrap.dart';
+import 'features/gate.dart';
 import 'ui/theme/app_theme.dart';
 
 void main() {
-  runApp(const EmuktanApp());
+  // The scope must sit above MaterialApp: dialogs are pushed onto the app's
+  // Navigator, which is an ancestor of `home`, so they can only see providers
+  // from a scope that wraps the whole app.
+  runApp(const ProviderScope(child: EmuktanApp()));
 }
 
 class EmuktanApp extends StatelessWidget {
-  const EmuktanApp({super.key});
+  const EmuktanApp({super.key, this.open = bootstrap});
+
+  /// Opens the database. Tests pass a version that uses an in-memory one.
+  final Future<AppContext> Function() open;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Emuktan',
+      title: Brand.name,
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
-      home: const _Startup(),
+      home: _Startup(open: open),
     );
   }
 }
 
-class _Startup extends StatefulWidget {
-  const _Startup();
+class _Startup extends ConsumerStatefulWidget {
+  const _Startup({required this.open});
+  final Future<AppContext> Function() open;
 
   @override
-  State<_Startup> createState() => _StartupState();
+  ConsumerState<_Startup> createState() => _StartupState();
 }
 
-class _StartupState extends State<_Startup> {
-  late final Future<AppContext> _future = bootstrap();
+class _StartupState extends ConsumerState<_Startup> {
+  AppContext? _app;
+  Object? _error;
   bool _recoveryConfirmed = false;
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<AppContext>(
-      future: _future,
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return _Message(
-            title: 'Cannot open the database',
-            body: '${snap.error}\n\nDo not delete any files. Contact support.',
-          );
-        }
-        if (!snap.hasData) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-        final app = snap.data!;
-        final recovery = app.newRecoveryKey;
-        if (recovery != null && !_recoveryConfirmed) {
-          return _RecoveryKeyScreen(
-            recoveryKey: recovery,
-            onConfirmed: () => setState(() => _recoveryConfirmed = true),
-          );
-        }
-        return _Message(
-          title: 'Emuktan',
-          body: 'Encrypted database is open.\nData folder: ${app.dataDir.path}',
-        );
+  void initState() {
+    super.initState();
+    widget.open().then(
+      (app) {
+        if (!mounted) return;
+        ref.read(appContextProvider.notifier).set(app);
+        setState(() => _app = app);
+      },
+      onError: (Object e) {
+        if (mounted) setState(() => _error = e);
       },
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_error != null) {
+      return _Message(
+        title: 'Cannot open the database',
+        body: '$_error\n\nDo not delete any files. Contact support.',
+      );
+    }
+    final app = _app;
+    if (app == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final recovery = app.newRecoveryKey;
+    if (recovery != null && !_recoveryConfirmed) {
+      return _RecoveryKeyScreen(
+        recoveryKey: recovery,
+        onConfirmed: () => setState(() => _recoveryConfirmed = true),
+      );
+    }
+    return const Gate();
   }
 }
 
@@ -96,7 +115,10 @@ class _Message extends StatelessWidget {
 }
 
 class _RecoveryKeyScreen extends StatelessWidget {
-  const _RecoveryKeyScreen({required this.recoveryKey, required this.onConfirmed});
+  const _RecoveryKeyScreen({
+    required this.recoveryKey,
+    required this.onConfirmed,
+  });
   final String recoveryKey;
   final VoidCallback onConfirmed;
 
@@ -112,37 +134,49 @@ class _RecoveryKeyScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Save your recovery key',
-                    style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  'Save your recovery key',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 12),
                 const Text(
-                    'All patient and sales data is encrypted. If this computer is lost or '
-                    'Windows is reinstalled, this key is the ONLY way to open the data and '
-                    'its backups. Write it down or print it, and keep it somewhere safe '
-                    'away from this computer.'),
+                  'All patient and sales data is encrypted. If this computer is lost or '
+                  'Windows is reinstalled, this key is the ONLY way to open the data and '
+                  'its backups. Write it down or print it, and keep it somewhere safe '
+                  'away from this computer.',
+                ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).colorScheme.outline),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: SelectableText(recoveryKey,
-                      style: const TextStyle(fontFamily: 'Consolas', fontSize: 18)),
+                  child: SelectableText(
+                    recoveryKey,
+                    style: const TextStyle(
+                      fontFamily: 'Consolas',
+                      fontSize: 18,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
-                Row(children: [
-                  OutlinedButton(
-                    onPressed: () =>
-                        Clipboard.setData(ClipboardData(text: recoveryKey)),
-                    child: const Text('Copy'),
-                  ),
-                  const SizedBox(width: 12),
-                  FilledButton(
-                    onPressed: onConfirmed,
-                    child: const Text('I have saved it'),
-                  ),
-                ]),
+                Row(
+                  children: [
+                    OutlinedButton(
+                      onPressed: () =>
+                          Clipboard.setData(ClipboardData(text: recoveryKey)),
+                      child: const Text('Copy'),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton(
+                      onPressed: onConfirmed,
+                      child: const Text('I have saved it'),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

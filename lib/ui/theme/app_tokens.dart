@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../../config/brand.dart';
+
 /// Design tokens for Emuktan. Single source of truth: DESIGN.md describes the
 /// intent, this file holds the values. Never hard-code a colour, size or radius
 /// in a widget; add a token here instead.
 
 /// 4-pt spacing grid.
 abstract final class Space {
-  static const double xs = 4, sm = 8, md = 12, lg = 16, xl = 24, xxl = 32, xxxl = 48;
+  static const double xs = 4,
+      sm = 8,
+      md = 12,
+      lg = 16,
+      xl = 24,
+      xxl = 32,
+      xxxl = 48;
 }
 
 abstract final class Radii {
@@ -17,7 +25,7 @@ abstract final class Radii {
 }
 
 /// Minimum interactive sizes. Counter work is mouse + keyboard + scanner, but
-/// the PC may have a touchscreen, so the sale flow uses the larger target.
+/// the counter PC has no touchscreen, so the larger target is kept only on the sale flow.
 abstract final class Hit {
   static const double standard = 40;
   static const double counter = 48; // Charge, quantity steppers, PIN keys
@@ -72,7 +80,12 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color window, surface, sidebar, separator;
   final Color text, textSecondary, textTertiary;
   final Color accent, onAccent, accentSoft;
-  final Color success, successSoft, warning, warningSoft, critical, criticalSoft;
+  final Color success,
+      successSoft,
+      warning,
+      warningSoft,
+      critical,
+      criticalSoft;
 
   static const light = AppColors(
     window: Color(0xFFF4F6F8),
@@ -82,9 +95,9 @@ class AppColors extends ThemeExtension<AppColors> {
     text: Color(0xFF14181F),
     textSecondary: Color(0xFF586171),
     textTertiary: Color(0xFF687180),
-    accent: Color(0xFF0A64AD),
-    onAccent: Color(0xFFFFFFFF),
-    accentSoft: Color(0xFFE2EFFA),
+    accent: Brand.accentLight,
+    onAccent: Brand.onAccentLight,
+    accentSoft: Brand.accentSoftLight,
     success: Color(0xFF18733E),
     successSoft: Color(0xFFE6F5EC),
     warning: Color(0xFF9A5B00),
@@ -101,9 +114,9 @@ class AppColors extends ThemeExtension<AppColors> {
     text: Color(0xFFF1F3F6),
     textSecondary: Color(0xFFA9B1BE),
     textTertiary: Color(0xFF8F98A6),
-    accent: Color(0xFF59AEF0),
-    onAccent: Color(0xFF0B1520),
-    accentSoft: Color(0xFF1B3144),
+    accent: Brand.accentDark,
+    onAccent: Brand.onAccentDark,
+    accentSoft: Brand.accentSoftDark,
     success: Color(0xFF4CC27E),
     successSoft: Color(0xFF173626),
     warning: Color(0xFFE8A33B),
