@@ -78,3 +78,7 @@ DateTime? parseExpiry(String input) {
   if (month < 1 || month > 12 || year < 2000 || year > 2100) return null;
   return DateTime(year, month + 1, 0);
 }
+
+/// "14:32" (24 hour, DESIGN.md section 9).
+String formatTime(DateTime d) =>
+    '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';

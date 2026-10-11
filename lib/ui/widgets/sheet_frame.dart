@@ -31,6 +31,7 @@ class SheetFrame extends StatelessWidget {
     this.cancelLabel = 'Cancel',
     this.cancelPops = true,
     this.onCancel,
+    this.extraActions = const [],
   });
   final String title, intro, actionLabel, cancelLabel;
   final List<Widget> children;
@@ -43,6 +44,9 @@ class SheetFrame extends StatelessWidget {
   /// a side action (such as "Copy receipt") that runs [onCancel] and stays.
   final bool cancelPops;
   final VoidCallback? onCancel;
+
+  /// Further buttons between the left button and the main action.
+  final List<Widget> extraActions;
 
   @override
   Widget build(BuildContext context) {
@@ -67,8 +71,13 @@ class SheetFrame extends StatelessWidget {
                 ErrorLine(error!),
               ],
               const SizedBox(height: Space.xl),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              // Wraps onto a second line instead of overflowing when labels
+              // are long and the sheet is narrow.
+              Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: Space.md,
+                runSpacing: Space.sm,
                 children: [
                   OutlinedButton(
                     onPressed: busy
@@ -79,8 +88,10 @@ class SheetFrame extends StatelessWidget {
                           },
                     child: Text(cancelLabel),
                   ),
-                  if (onAction != null) ...[
-                    const SizedBox(width: Space.md),
+                  ...extraActions,
+                  // Shown whenever it has a label; a null action means disabled
+                  // (for example, nothing chosen yet), not "no button".
+                  if (actionLabel.isNotEmpty)
                     FilledButton(
                       onPressed: busy ? null : onAction,
                       style: destructive
@@ -93,7 +104,6 @@ class SheetFrame extends StatelessWidget {
                           : null,
                       child: Text(actionLabel),
                     ),
-                  ],
                 ],
               ),
             ],

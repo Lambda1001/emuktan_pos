@@ -1,8 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/bootstrap.dart';
 import 'data/auth_service.dart';
+import 'data/backup_service.dart';
 import 'data/database.dart';
+import 'data/held_sales_service.dart';
+import 'data/sales_admin_service.dart';
 import 'data/sales_service.dart';
 import 'data/stock_service.dart';
 
@@ -51,4 +56,37 @@ final salesServiceProvider = Provider<SalesService>(
     ref.watch(appContextProvider)!.db,
     ref.watch(stockServiceProvider),
   ),
+);
+
+final salesAdminServiceProvider = Provider<SalesAdminService>(
+  (ref) => SalesAdminService(ref.watch(appContextProvider)!.db),
+);
+
+/// Null only when the app was opened without a database key (some tests).
+final backupServiceProvider = Provider<BackupService?>((ref) {
+  final app = ref.watch(appContextProvider);
+  if (app == null || app.key == null) return null;
+  return BackupService(app.db, app.dataDir, app.key!);
+});
+
+/// Last backup and any failure. Refresh with `ref.invalidate`.
+final backupStatusProvider = FutureProvider<BackupStatus?>(
+  (ref) => ref.watch(backupServiceProvider)?.status(),
+);
+
+/// How the app closes itself after a restore. Replaced in tests.
+final appExitProvider = Provider<Future<void> Function()>((ref) {
+  return () async {
+    await ref.read(appContextProvider)?.db.close();
+    exit(0);
+  };
+});
+
+final heldSalesServiceProvider = Provider<HeldSalesService>(
+  (ref) => HeldSalesService(ref.watch(appContextProvider)!.db),
+);
+
+/// Parked sales, oldest first. Refresh with `ref.invalidate` after any change.
+final heldSalesProvider = FutureProvider<List<HeldSale>>(
+  (ref) => ref.watch(heldSalesServiceProvider).list(),
 );

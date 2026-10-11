@@ -1,25 +1,32 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_state.dart';
+import 'config/app_config.dart';
 import 'config/brand.dart';
 import 'core/bootstrap.dart';
 import 'features/gate.dart';
+import 'features/startup/first_run_screen.dart';
 import 'ui/theme/app_theme.dart';
 
 void main() {
   // The scope must sit above MaterialApp: dialogs are pushed onto the app's
   // Navigator, which is an ancestor of `home`, so they can only see providers
   // from a scope that wraps the whole app.
-  runApp(const ProviderScope(child: EmuktanApp()));
+  runApp(ProviderScope(child: EmuktanApp(firstRun: FirstRunHooks.real())));
 }
 
 class EmuktanApp extends StatelessWidget {
-  const EmuktanApp({super.key, this.open = bootstrap});
+  const EmuktanApp({super.key, this.open = bootstrap, this.firstRun});
 
   /// Opens the database. Tests pass a version that uses an in-memory one.
   final Future<AppContext> Function() open;
+
+  /// Offers "restore from a backup" on a PC with no data. Null in tests.
+  final FirstRunHooks? firstRun;
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +36,15 @@ class EmuktanApp extends StatelessWidget {
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
-      home: _Startup(open: open),
+      home: _Startup(open: open, firstRun: firstRun),
     );
   }
 }
 
 class _Startup extends ConsumerStatefulWidget {
-  const _Startup({required this.open});
+  const _Startup({required this.open, this.firstRun});
   final Future<AppContext> Function() open;
+  final FirstRunHooks? firstRun;
 
   @override
   ConsumerState<_Startup> createState() => _StartupState();
@@ -46,20 +54,62 @@ class _StartupState extends ConsumerState<_Startup> {
   AppContext? _app;
   Object? _error;
   bool _recoveryConfirmed = false;
+  bool _noticeSeen = false;
+  bool _askFirstRun = false;
+  Timer? _backupTimer;
 
   @override
   void initState() {
     super.initState();
+    _begin();
+  }
+
+  @override
+  void dispose() {
+    _backupTimer?.cancel();
+    super.dispose();
+  }
+
+  /// A PC with no data is offered "restore" before anything is created.
+  Future<void> _begin() async {
+    try {
+      final hooks = widget.firstRun;
+      if (hooks != null && await hooks.isFirstRun()) {
+        if (mounted) setState(() => _askFirstRun = true);
+        return;
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e);
+      return;
+    }
+    _open();
+  }
+
+  void _open() {
     widget.open().then(
       (app) {
         if (!mounted) return;
         ref.read(appContextProvider.notifier).set(app);
         setState(() => _app = app);
+        _startBackups();
       },
       onError: (Object e) {
         if (mounted) setState(() => _error = e);
       },
     );
+  }
+
+  /// One backup check now, then every half hour while the app is open.
+  void _startBackups() {
+    final svc = ref.read(backupServiceProvider);
+    if (svc == null) return;
+    Future<void> check() async {
+      await svc.runIfDue();
+      if (mounted) ref.invalidate(backupStatusProvider);
+    }
+
+    check();
+    _backupTimer = Timer.periodic(BackupConfig.checkEvery, (_) => check());
   }
 
   @override
@@ -70,9 +120,30 @@ class _StartupState extends ConsumerState<_Startup> {
         body: '$_error\n\nDo not delete any files. Contact support.',
       );
     }
+    if (_askFirstRun) {
+      return FirstRunScreen(
+        onNewShop: () {
+          setState(() => _askFirstRun = false);
+          _open();
+        },
+        onRestore: (path, key) async {
+          await widget.firstRun!.restore(path, key);
+          if (!mounted) return;
+          setState(() => _askFirstRun = false);
+          _open();
+        },
+      );
+    }
     final app = _app;
     if (app == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final notice = app.notice;
+    if (notice != null && !_noticeSeen) {
+      return NoticeScreen(
+        message: notice,
+        onContinue: () => setState(() => _noticeSeen = true),
+      );
     }
     final recovery = app.newRecoveryKey;
     if (recovery != null && !_recoveryConfirmed) {

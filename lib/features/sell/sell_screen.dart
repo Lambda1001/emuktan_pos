@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app_state.dart';
 import '../../core/format.dart';
 import '../../data/database.dart';
+import '../../data/held_sales_service.dart';
 import '../../data/sales_service.dart';
 import '../../data/tables.dart';
 import '../../domain/cart.dart';
@@ -14,10 +15,13 @@ import '../../ui/widgets/error_line.dart';
 import '../stock/stock_screen.dart' show stockProvider;
 import '../stock/stock_widgets.dart';
 import 'cart_state.dart';
+import 'park_dialogs.dart';
+import 'pay_dialog.dart';
 import 'sell_dialogs.dart';
 
-/// The counter screen: find a medicine, build the sale, take payment.
-/// DESIGN.md sections 4 and 8: working area plus a fixed 340 px summary.
+/// The counter screen. Products on the left, the sale on the right, and a
+/// large payment panel over it when the cashier presses Pay.
+/// DESIGN.md sections 4 and 8.
 class SellScreen extends ConsumerStatefulWidget {
   const SellScreen({super.key, required this.me});
   final User me;
@@ -29,19 +33,13 @@ class SellScreen extends ConsumerStatefulWidget {
 class _SellScreenState extends ConsumerState<SellScreen> {
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
-  final _cash = TextEditingController();
-  final _mpesa = TextEditingController();
   Discount? _discount;
-  PaymentMethod _method = PaymentMethod.cash;
-  bool _busy = false;
   String? _error;
 
   @override
   void dispose() {
     _search.dispose();
     _searchFocus.dispose();
-    _cash.dispose();
-    _mpesa.dispose();
     super.dispose();
   }
 
@@ -97,7 +95,69 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     if (d != null) setState(() => _discount = d);
   }
 
-  Future<void> _charge(CartQuote quote, int total) async {
+  void _toast(String message) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
+
+  /// Sets the sale aside and starts a clean one.
+  Future<void> _park() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => ParkSaleDialog(
+        me: widget.me,
+        lines: ref.read(cartProvider),
+        discount: _discount,
+      ),
+    );
+    if (ok != true || !mounted) return;
+    ref.read(cartProvider.notifier).clear();
+    setState(() => _discount = null);
+    _toast('Sale parked. Find it under Parked.');
+    _focusSearch();
+  }
+
+  /// Lists parked sales and loads the one the cashier picks up.
+  Future<void> _openParked(CartQuote current) async {
+    final picked = await showDialog<HeldSale>(
+      context: context,
+      builder: (_) => ParkedSalesDialog(cartIsEmpty: current.lines.isEmpty),
+    );
+    if (picked == null || !mounted) return;
+
+    // Read stock and prices fresh, not from what the screen loaded earlier.
+    // Medicines removed since it was parked cannot be sold; say so.
+    ref.invalidate(stockProvider);
+    final fresh = await ref.read(stockProvider.future);
+    if (!mounted) return;
+    final known = {for (final s in fresh) s.medicine.id};
+    final usable = [
+      for (final l in picked.lines)
+        if (known.contains(l.medicineId)) l,
+    ];
+    final dropped = picked.lines.length - usable.length;
+
+    ref.read(cartProvider.notifier).load(usable);
+    // The discount was approved for that exact sale: keep it only if nothing
+    // changed. The cart listener drops it if it no longer fits the total.
+    if (dropped == 0 && picked.discountCents > 0 && picked.approverId != null) {
+      setState(
+        () => _discount = Discount(
+          cents: picked.discountCents,
+          approverId: picked.approverId!,
+          approverName: picked.approverName ?? 'unknown',
+        ),
+      );
+    }
+    _toast(
+      dropped > 0
+          ? 'Picked up. $dropped item${dropped == 1 ? ' was' : 's were'} removed because the medicine is no longer sold, and the discount was dropped.'
+          : 'Picked up${picked.label == null ? '' : ': ${picked.label}'}. Prices and stock are checked again when you pay.',
+    );
+    _focusSearch();
+  }
+
+  /// Pay: confirm expired stock, open the payment panel, then show the receipt.
+  Future<void> _pay(CartQuote quote, int subtotal, int total) async {
     if (quote.hasExpired) {
       final names = {
         for (final l in quote.lines.where((l) => l.hasExpired)) l.medicine.name,
@@ -106,44 +166,32 @@ class _SellScreenState extends ConsumerState<SellScreen> {
         context: context,
         builder: (_) => ExpiredStockDialog(names: names),
       );
-      if (go != true) return;
+      if (go != true || !mounted) return;
     }
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      final cash = _cash.text.trim().isEmpty ? null : parseKes(_cash.text);
-      final receipt = await ref
-          .read(salesServiceProvider)
-          .completeSale(
-            lines: ref.read(cartProvider),
-            cashierId: widget.me.id,
-            discountCents: _discount?.cents ?? 0,
-            discountApprovedBy: _discount?.approverId,
-            method: _method,
-            cashTenderedCents: cash,
-            mpesaCode: _mpesa.text,
-          );
-      ref.read(cartProvider.notifier).clear();
-      ref.invalidate(stockProvider);
-      setState(() {
-        _discount = null;
-        _cash.clear();
-        _mpesa.clear();
-      });
-      if (!mounted) return;
-      await showDialog<bool>(
-        context: context,
-        builder: (_) => ReceiptDialog(receipt: receipt),
-      );
+    final receipt = await showDialog<SaleReceipt>(
+      context: context,
+      builder: (_) => PayDialog(
+        me: widget.me,
+        lines: ref.read(cartProvider),
+        subtotalCents: subtotal,
+        discount: _discount,
+        totalCents: total,
+      ),
+    );
+    // Whether or not it sold, stock may have moved: show the truth.
+    ref.invalidate(stockProvider);
+    if (receipt == null) {
       if (mounted) _focusSearch();
-    } on SaleRuleException catch (e) {
-      ref.invalidate(stockProvider);
-      if (mounted) setState(() => _error = e.message);
-    } finally {
-      if (mounted) setState(() => _busy = false);
+      return;
     }
+    ref.read(cartProvider.notifier).clear();
+    setState(() => _discount = null);
+    if (!mounted) return;
+    await showDialog<bool>(
+      context: context,
+      builder: (_) => ReceiptDialog(receipt: receipt),
+    );
+    if (mounted) _focusSearch();
   }
 
   @override
@@ -174,8 +222,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     });
 
     final subtotal = quote.subtotalCents;
-    final discount = _discount?.cents ?? 0;
-    final total = subtotal - discount;
+    final total = subtotal - (_discount?.cents ?? 0);
 
     return CallbackShortcuts(
       bindings: {
@@ -185,22 +232,20 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: _workArea(stock, all, quote)),
+          Expanded(child: _catalogue(stock, all)),
           const SizedBox(width: Space.lg),
-          SizedBox(width: 340, child: _summary(quote, subtotal, total)),
+          SizedBox(width: 440, child: _salePanel(quote, subtotal, total)),
         ],
       ),
     );
   }
 
-  // ---- left: search, results, cart --------------------------------------
+  // ---- left: search and product tiles -----------------------------------
 
-  Widget _workArea(
+  Widget _catalogue(
     AsyncValue<List<MedicineStock>> stock,
     List<MedicineStock> all,
-    CartQuote quote,
   ) {
-    final t = Theme.of(context).textTheme;
     final results = _results(all);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -225,7 +270,6 @@ class _SellScreenState extends ConsumerState<SellScreen> {
         ),
         const SizedBox(height: Space.md),
         Expanded(
-          flex: 2,
           child: Card(
             clipBehavior: Clip.antiAlias,
             child: stock.isLoading
@@ -242,42 +286,20 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                     title: 'Nothing matches',
                     body: _error ?? 'Try a different name or barcode.',
                   )
-                : ListView.separated(
+                : GridView.builder(
+                    padding: const EdgeInsets.all(Space.md),
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 240,
+                          mainAxisExtent: 140,
+                          crossAxisSpacing: Space.md,
+                          mainAxisSpacing: Space.md,
+                        ),
                     itemCount: results.length,
-                    separatorBuilder: (_, _) => const Divider(),
-                    itemBuilder: (_, i) => _ResultRow(
+                    itemBuilder: (_, i) => _ProductTile(
                       s: results[i],
                       onAdd: () => _add(results[i].medicine),
                     ),
-                  ),
-          ),
-        ),
-        const SizedBox(height: Space.md),
-        Text('In this sale', style: t.titleMedium),
-        const SizedBox(height: Space.sm),
-        Expanded(
-          flex: 3,
-          child: Card(
-            clipBehavior: Clip.antiAlias,
-            child: quote.lines.isEmpty
-                ? const _Hint(
-                    icon: Icons.shopping_basket_outlined,
-                    title: 'Nothing in the sale yet',
-                    body: 'Search or scan a medicine above to add it.',
-                  )
-                : ListView.separated(
-                    itemCount: quote.lines.length,
-                    separatorBuilder: (_, _) => const Divider(),
-                    itemBuilder: (_, i) {
-                      final cart = ref.read(cartProvider.notifier);
-                      final l = quote.lines[i];
-                      return _CartRow(
-                        priced: l,
-                        onMode: (m) => cart.setMode(i, m),
-                        onCount: (n) => cart.setCount(i, n),
-                        onRemove: () => cart.remove(i),
-                      );
-                    },
                   ),
           ),
         ),
@@ -285,183 +307,176 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     );
   }
 
-  // ---- right: summary and payment ---------------------------------------
+  // ---- right: the sale ---------------------------------------------------
 
-  /// Why Charge is off, in words (DESIGN.md section 8, rule 5). Null if it can go.
-  String? _whyNot(CartQuote quote, int total) {
-    if (quote.lines.isEmpty) return 'Add a medicine to start a sale.';
-    if (!quote.isValid) return 'Fix the lines marked in red first.';
-    if (_method == PaymentMethod.cash) {
-      if (_cash.text.trim().isNotEmpty) {
-        final c = parseKes(_cash.text);
-        if (c == null) return 'Enter the cash received as an amount.';
-        if (c < total) return 'The cash received is less than the total.';
-      }
-    } else if (_mpesa.text.trim().length < 8) {
-      return 'Enter the M-Pesa code from the message.';
-    }
-    return null;
-  }
-
-  Widget _summary(CartQuote quote, int subtotal, int total) {
+  Widget _salePanel(CartQuote quote, int subtotal, int total) {
     final t = Theme.of(context).textTheme;
     final c = context.colors;
-    final why = _whyNot(quote, total);
-    final cash = parseKes(_cash.text);
-    final change = (cash != null && cash >= total) ? cash - total : null;
+    final cart = ref.read(cartProvider.notifier);
+    final why = quote.lines.isEmpty
+        ? 'Add a medicine to start a sale.'
+        : !quote.isValid
+        ? 'Fix the lines marked in red first.'
+        : null;
+    final items = quote.lines.length;
+    final parked = ref.watch(heldSalesProvider).value?.length ?? 0;
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(Space.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('Sale', style: t.titleLarge),
-                    const SizedBox(height: Space.md),
-                    if (quote.hasExpired) ...[
-                      const _Notice(
-                        'This sale includes expired stock.',
-                        tone: Tone.warning,
-                        icon: Icons.warning_amber_rounded,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Space.lg,
+              Space.md,
+              Space.sm,
+              Space.md,
+            ),
+            child: Row(
+              children: [
+                Text('Sale', style: t.titleLarge),
+                const SizedBox(width: Space.sm),
+                if (items > 0)
+                  Text(
+                    '$items item${items == 1 ? '' : 's'}',
+                    style: t.bodySmall,
+                  ),
+                const Spacer(),
+                if (items > 0)
+                  TextButton(
+                    onPressed: () {
+                      cart.clear();
+                      setState(() => _discount = null);
+                    },
+                    child: const Text('Clear sale'),
+                  ),
+              ],
+            ),
+          ),
+          if (items > 0 || parked > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.lg,
+                0,
+                Space.lg,
+                Space.md,
+              ),
+              child: Wrap(
+                spacing: Space.sm,
+                runSpacing: Space.sm,
+                children: [
+                  if (items > 0)
+                    OutlinedButton.icon(
+                      onPressed: () => _park(),
+                      icon: const Icon(Icons.pause_circle_outline, size: 18),
+                      label: const Text('Park sale'),
+                    ),
+                  if (parked > 0)
+                    OutlinedButton.icon(
+                      onPressed: () => _openParked(quote),
+                      icon: const Icon(Icons.history, size: 18),
+                      label: Text('Parked ($parked)'),
+                    ),
+                ],
+              ),
+            ),
+          const Divider(),
+          Expanded(
+            child: quote.lines.isEmpty
+                ? const _Hint(
+                    icon: Icons.shopping_basket_outlined,
+                    title: 'Nothing in the sale yet',
+                    body: 'Click a medicine, or scan it, to add it.',
+                  )
+                : ListView.separated(
+                    itemCount: quote.lines.length,
+                    separatorBuilder: (_, _) => const Divider(),
+                    itemBuilder: (_, i) => _CartRow(
+                      priced: quote.lines[i],
+                      onMode: (m) => cart.setMode(i, m),
+                      onCount: (n) => cart.setCount(i, n),
+                      onRemove: () => cart.remove(i),
+                    ),
+                  ),
+          ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.all(Space.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (quote.hasExpired) ...[
+                  const _Notice(
+                    'This sale includes expired stock.',
+                    tone: Tone.warning,
+                    icon: Icons.warning_amber_rounded,
+                  ),
+                  const SizedBox(height: Space.md),
+                ],
+                _Line('Subtotal', formatKes(subtotal)),
+                const SizedBox(height: Space.sm),
+                if (_discount != null)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Discount, approved by ${_discount!.approverName}',
+                          style: t.bodySmall,
+                        ),
                       ),
-                      const SizedBox(height: Space.md),
+                      Text(
+                        '-${formatKes(_discount!.cents)}',
+                        style: t.bodyMedium,
+                      ),
+                      TextButton(
+                        onPressed: () => setState(() => _discount = null),
+                        child: const Text('Remove'),
+                      ),
                     ],
-                    _Line('Subtotal', formatKes(subtotal)),
-                    const SizedBox(height: Space.sm),
-                    if (_discount != null)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Discount, approved by ${_discount!.approverName}',
-                              style: t.bodySmall,
-                            ),
-                          ),
-                          Text(
-                            '-${formatKes(_discount!.cents)}',
-                            style: t.bodyMedium,
-                          ),
-                          TextButton(
-                            onPressed: () => setState(() => _discount = null),
-                            child: const Text('Remove'),
-                          ),
-                        ],
-                      )
-                    else
-                      OutlinedButton.icon(
-                        onPressed: quote.isValid
-                            ? () => _addDiscount(subtotal)
-                            : null,
-                        icon: const Icon(Icons.sell_outlined, size: 18),
-                        label: const Text('Add discount'),
-                      ),
-                    const Divider(height: Space.xxl),
-                    Text('Total', style: t.bodySmall),
-                    Text(
-                      formatKes(total),
-                      style: t.displaySmall,
-                      overflow: TextOverflow.ellipsis,
+                  )
+                else
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: quote.isValid
+                          ? () => _addDiscount(subtotal)
+                          : null,
+                      icon: const Icon(Icons.sell_outlined, size: 18),
+                      label: const Text('Add discount'),
                     ),
-                    const SizedBox(height: Space.xl),
-                    SegmentedButton<PaymentMethod>(
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(
-                          value: PaymentMethod.cash,
-                          label: Text('Cash'),
-                        ),
-                        ButtonSegment(
-                          value: PaymentMethod.mpesa,
-                          label: Text('M-Pesa'),
-                        ),
-                      ],
-                      selected: {_method},
-                      onSelectionChanged: (s) => setState(() {
-                        _method = s.single;
-                        _error = null;
-                      }),
-                    ),
-                    const SizedBox(height: Space.lg),
-                    if (_method == PaymentMethod.cash) ...[
-                      TextField(
-                        controller: _cash,
-                        onChanged: (_) => setState(() => _error = null),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
-                        ],
-                        decoration: InputDecoration(
-                          labelText: 'Cash received',
-                          prefixText: 'KES ',
-                          helperText: 'Leave empty if exact',
-                          suffixIcon: TextButton(
-                            onPressed: total > 0
-                                ? () => setState(
-                                    () => _cash.text = (total / 100)
-                                        .toStringAsFixed(
-                                          total % 100 == 0 ? 0 : 2,
-                                        ),
-                                  )
-                                : null,
-                            child: const Text('Exact'),
-                          ),
-                        ),
-                      ),
-                      if (change != null) ...[
-                        const SizedBox(height: Space.md),
-                        _Line(
-                          'Change due',
-                          formatKes(change, alwaysCents: true),
-                          strong: true,
-                        ),
-                      ],
-                    ] else
-                      TextField(
-                        controller: _mpesa,
-                        onChanged: (_) => setState(() => _error = null),
-                        textCapitalization: TextCapitalization.characters,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'[A-Za-z0-9]'),
-                          ),
-                          LengthLimitingTextInputFormatter(12),
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: 'M-Pesa transaction code',
-                          helperText: 'For example QGH7K2LMNP',
-                        ),
-                      ),
-                  ],
+                  ),
+                const SizedBox(height: Space.sm),
+                Text('Total', style: t.bodySmall),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(formatKes(total), style: t.displaySmall),
                 ),
-              ),
+                const SizedBox(height: Space.md),
+                FilledButton(
+                  onPressed: why == null
+                      ? () => _pay(quote, subtotal, total)
+                      : null,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(Hit.counter),
+                  ),
+                  child: Text(
+                    total > 0 ? 'Pay ${formatKes(total)}' : 'Pay',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (why != null) ...[
+                  const SizedBox(height: Space.sm),
+                  Text(
+                    why,
+                    style: t.bodySmall!.copyWith(color: c.textSecondary),
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: Space.md),
-            if (_error != null) ...[
-              ErrorLine(_error!),
-              const SizedBox(height: Space.md),
-            ],
-            FilledButton(
-              onPressed: (why == null && !_busy)
-                  ? () => _charge(quote, total)
-                  : null,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(Hit.counter),
-              ),
-              child: Text(
-                total > 0 ? 'Charge ${formatKes(total)}' : 'Charge',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (why != null) ...[
-              const SizedBox(height: Space.sm),
-              Text(why, style: t.bodySmall!.copyWith(color: c.textSecondary)),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -496,20 +511,16 @@ class _Hint extends StatelessWidget {
 }
 
 class _Line extends StatelessWidget {
-  const _Line(this.label, this.value, {this.strong = false});
+  const _Line(this.label, this.value);
   final String label, value;
-  final bool strong;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final style = strong ? t.titleMedium : t.bodyMedium;
     return Row(
       children: [
-        Expanded(
-          child: Text(label, style: strong ? t.titleMedium : t.bodySmall),
-        ),
-        Text(value, style: style),
+        Expanded(child: Text(label, style: t.bodySmall)),
+        Text(value, style: t.bodyMedium),
       ],
     );
   }
@@ -555,9 +566,9 @@ class _Notice extends StatelessWidget {
   }
 }
 
-/// One medicine in the search results. Click anywhere to add it.
-class _ResultRow extends StatelessWidget {
-  const _ResultRow({required this.s, required this.onAdd});
+/// One medicine to click. Text only: name, price, and what is in stock.
+class _ProductTile extends StatelessWidget {
+  const _ProductTile({required this.s, required this.onAdd});
   final MedicineStock s;
   final VoidCallback onAdd;
 
@@ -570,72 +581,68 @@ class _ResultRow extends StatelessWidget {
     final prices = [
       for (final mode in offeredModes(m))
         '${modeLabel(mode)} ${formatKes(priceCents(m, mode)!)}',
-    ].join('   ');
-    return InkWell(
-      onTap: out ? null : onAdd,
-      hoverColor: c.separator.withValues(alpha: 0.4),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Space.lg,
-          vertical: Space.sm,
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Row(
+    ].join('  ');
+
+    return Material(
+      color: out ? c.window : c.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Radii.card),
+        side: BorderSide(color: c.separator),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: out ? null : onAdd,
+        hoverColor: c.accentSoft,
+        focusColor: c.accent.withValues(alpha: 0.16),
+        child: Padding(
+          padding: const EdgeInsets.all(Space.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 4,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      m.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: t.titleMedium!.copyWith(
-                        color: out ? c.textTertiary : null,
-                      ),
-                    ),
-                    Text(
-                      prices,
-                      overflow: TextOverflow.ellipsis,
-                      style: t.bodySmall,
-                    ),
-                  ],
+              Text(
+                m.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: t.titleMedium!.copyWith(
+                  color: out ? c.textTertiary : null,
                 ),
               ),
-              Expanded(
-                flex: 2,
-                child: Text(
-                  quantityText(s.onHand, m.baseUnitName),
-                  style: t.bodySmall,
-                  overflow: TextOverflow.ellipsis,
-                ),
+              const SizedBox(height: Space.xs),
+              Text(
+                prices,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: t.bodySmall,
               ),
-              SizedBox(
-                width: 120,
-                child: out
-                    ? const StatusChip(
-                        label: 'Out of stock',
-                        icon: Icons.remove_circle_outline,
-                        tone: Tone.neutral,
-                      )
-                    : s.sellable == 0
-                    ? const StatusChip(
-                        label: 'Expired',
-                        icon: Icons.error_outline,
-                        tone: Tone.critical,
-                      )
-                    : s.isLow
-                    ? const StatusChip(
-                        label: 'Low stock',
-                        icon: Icons.south,
-                        tone: Tone.warning,
-                      )
-                    : const SizedBox.shrink(),
-              ),
-              Icon(
-                Icons.add_circle_outline,
-                color: out ? c.textTertiary : c.accent,
+              const Spacer(),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      quantityText(s.onHand, m.baseUnitName),
+                      overflow: TextOverflow.ellipsis,
+                      style: t.labelSmall,
+                    ),
+                  ),
+                  if (out)
+                    const StatusChip(
+                      label: 'Out',
+                      icon: Icons.remove_circle_outline,
+                      tone: Tone.neutral,
+                    )
+                  else if (s.sellable == 0)
+                    const StatusChip(
+                      label: 'Expired',
+                      icon: Icons.error_outline,
+                      tone: Tone.critical,
+                    )
+                  else if (s.isLow)
+                    const StatusChip(
+                      label: 'Low',
+                      icon: Icons.south,
+                      tone: Tone.warning,
+                    ),
+                ],
               ),
             ],
           ),

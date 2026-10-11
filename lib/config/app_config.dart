@@ -28,3 +28,18 @@ abstract final class StockConfig {
   /// A batch expiring within this many days is flagged "Expires soon".
   static const int expiringSoonDays = 90;
 }
+
+/// Backups.
+abstract final class BackupConfig {
+  /// A new automatic backup is taken when the last one is older than this.
+  static const Duration every = Duration(hours: 24);
+
+  /// How often the running app checks whether a backup is due.
+  static const Duration checkEvery = Duration(minutes: 30);
+
+  /// Backups kept in the folder; older ones are removed after a new one.
+  static const int keep = 14;
+
+  /// The status bar turns amber when the last backup is older than this.
+  static const Duration staleAfter = Duration(hours: 48);
+}

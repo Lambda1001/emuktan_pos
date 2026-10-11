@@ -48,6 +48,9 @@ class CartNotifier extends Notifier<List<CartLine>> {
   void remove(int index) => state = [...state]..removeAt(index);
 
   void clear() => state = const [];
+
+  /// Replaces the sale, for example when a parked sale is picked up.
+  void load(List<CartLine> lines) => state = List.of(lines);
 }
 
 final cartProvider = NotifierProvider<CartNotifier, List<CartLine>>(

@@ -4,6 +4,7 @@ import '../../data/tables.dart';
 
 enum Destination {
   sell('Sell', Icons.point_of_sale_outlined, Icons.point_of_sale),
+  sales('Sales', Icons.receipt_long_outlined, Icons.receipt_long),
   patients('Patients', Icons.people_outline, Icons.people),
   stock('Stock', Icons.inventory_2_outlined, Icons.inventory_2),
   timeClock('Time clock', Icons.schedule_outlined, Icons.schedule),
@@ -24,6 +25,7 @@ enum Destination {
   /// What the empty page tells the user, until the screen is built.
   String get comingSoon => switch (this) {
     Destination.sell => 'Sales will appear here.',
+    Destination.sales => 'Past sales will appear here.',
     Destination.patients => 'Registered patients will appear here.',
     Destination.stock => 'Medicines and batches will appear here.',
     Destination.timeClock => 'Clock in and out here.',

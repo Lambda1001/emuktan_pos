@@ -38,6 +38,8 @@ class WrongDatabaseKeyException implements Exception {
     ClockEntries,
     Settings,
     SyncOutbox,
+    SaleReturns,
+    HeldSales,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -50,12 +52,22 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// The newest schema this build understands. A backup made by a newer
+  /// build is refused on restore rather than opened wrongly.
+  static const currentSchemaVersion = 3;
+
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => currentSchemaVersion;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      // v2: returns after a sale.
+      if (from < 2) await m.createTable(saleReturns);
+      // v3: sales set aside before payment.
+      if (from < 3) await m.createTable(heldSales);
+    },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },

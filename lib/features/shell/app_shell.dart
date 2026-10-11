@@ -6,12 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app_state.dart';
 import '../../config/app_config.dart';
+import '../../core/format.dart';
 import '../../data/database.dart';
 import '../../ui/theme/app_tokens.dart';
 import '../../ui/widgets/brand_mark.dart';
+import '../sales/sales_screen.dart';
 import '../sell/sell_screen.dart';
+import '../settings/settings_screen.dart';
 import '../staff/staff_dialogs.dart';
-import '../staff/staff_screen.dart';
 import '../stock/stock_screen.dart';
 import 'destinations.dart';
 
@@ -217,9 +219,11 @@ class _Page extends StatelessWidget {
         const SizedBox(height: Space.lg),
         Expanded(
           child: destination == Destination.settings
-              ? StaffScreen(me: user)
+              ? SettingsScreen(me: user)
               : destination == Destination.sell
               ? SellScreen(me: user)
+              : destination == Destination.sales
+              ? SalesScreen(me: user)
               : destination == Destination.stock
               ? StockScreen(me: user)
               : Card(
@@ -259,6 +263,8 @@ class _StatusBar extends StatelessWidget {
         Icon(Icons.cloud_off_outlined, size: 14, color: c.textSecondary),
         const SizedBox(width: Space.xs),
         Text('Working offline', style: style),
+        const SizedBox(width: Space.lg),
+        const _BackupIndicator(),
         const Spacer(),
         Icon(Icons.person_outline, size: 14, color: c.textSecondary),
         const SizedBox(width: Space.xs),
@@ -293,6 +299,63 @@ class _StatusBar extends StatelessWidget {
           child: const Text('Switch user'),
         ),
       ],
+    );
+  }
+}
+
+/// Backup state in the status bar. Amber (icon and words) when the last
+/// backup failed or is more than two days old. Hidden when backups are
+/// unavailable (tests without a key).
+class _BackupIndicator extends ConsumerWidget {
+  const _BackupIndicator();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(backupServiceProvider) == null) {
+      return const SizedBox.shrink();
+    }
+    final status = ref.watch(backupStatusProvider).value;
+    if (status == null) return const SizedBox.shrink();
+    final c = context.colors;
+    final style = Theme.of(context).textTheme.labelSmall!;
+    final now = DateTime.now();
+
+    final String text;
+    final bool warn;
+    if (status.lastError != null) {
+      text = 'Backup failed';
+      warn = true;
+    } else if (status.lastAt == null) {
+      text = 'No backup yet';
+      warn = true;
+    } else if (status.isStale(now)) {
+      final days = now.difference(status.lastAt!).inDays;
+      text = 'Last backup $days days ago';
+      warn = true;
+    } else {
+      final d = status.lastAt!;
+      final today =
+          d.year == now.year && d.month == now.month && d.day == now.day;
+      text = today
+          ? 'Backed up today ${formatTime(d)}'
+          : 'Backed up ${formatDate(d)}';
+      warn = false;
+    }
+    final color = warn ? c.warning : c.textSecondary;
+    return Tooltip(
+      message: status.lastError ?? 'Open Staff and settings, then Backup.',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            warn ? Icons.warning_amber_rounded : Icons.backup_outlined,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: Space.xs),
+          Text(text, style: style.copyWith(color: color)),
+        ],
+      ),
     );
   }
 }

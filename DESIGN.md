@@ -44,8 +44,8 @@ Signing in: choose your name, then enter a PIN. The app locks after inactivity a
 
 - 4 pt spacing grid: 4, 8, 12, 16, 24, 32, 48.
 - Window padding 24. Panels on `surface`, window on `window`. Panel radius 12, control radius 8, sheet radius 16.
-- Sidebar 208 px. Sell screen: working area plus a fixed 340 px summary panel on the right.
-- Minimum window 1024 x 640. Designed for a 1366 x 768 laptop and scales up.
+- Sidebar 208 px. Sell screen: a split layout. Products (text tiles, no photos) on the left; the current sale on the right in a fixed 440 px panel with the lines, totals and one **Pay** button. Pay opens a large payment panel over the sale (see section 8, rule 5).
+- Minimum window 1366 x 720 (decided Oct 2026). Designed for a 1366 x 768 laptop and scales up.
 - Status bar always shows: backup/sync state, offline state, signed-in user.
 
 ## 5. Sizes and type
@@ -96,7 +96,7 @@ Every text pair is tested to WCAG AA (4.5:1) in `test/theme_test.dart`.
 2. **Selling units:** each medicine shows only the ways it is actually sold (pack, strip, single). The row says what leaves stock, for example "2 strips = 20 tablets".
 3. **Batches:** the system picks the batch that expires first and shows it. Staff never choose a batch by hand during a sale.
 4. **Discounts** need a clinician or the owner to approve. A cashier sees a sheet asking one of them to enter their PIN. The approver is recorded on the sale.
-5. **Charge button** says exactly what will happen ("Charge KES 1,320"). If it is disabled, a line under it says why.
+5. **Pay** says exactly what will happen ("Pay KES 1,320"). If it is disabled, a line under it says why. It opens the payment panel: the amount due in large type, Cash or M-Pesa, and for cash a number pad with Exact and quick-note buttons (50, 100, 200, 500, 1,000), the cash received, and the change due or what is still owed. The same entry works from the keyboard: digits and the decimal point type the amount, Backspace deletes, Enter completes, Esc goes back to the sale. The completing button says "Complete sale" and stays off until the cash covers the total (or the M-Pesa code is entered). If the sale is refused at that point (for example, stock changed), the reason shows in the panel and the sale is untouched.
 6. **Warnings in plain words:** "Expired. Do not sell." beats "Status: 3".
 7. **Offline is normal.** No error dialogs for a lost connection. The status bar says "Working offline" and sales continue. A sync that has not succeeded for 24 hours turns the status bar amber and says so.
 8. **Empty states** say what will appear and how to add the first item.

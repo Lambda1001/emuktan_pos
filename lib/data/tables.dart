@@ -192,3 +192,41 @@ class SyncOutbox extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get sentAt => dateTime().nullable()();
 }
+
+/// Items handed back after a sale. A voided sale is cancelled whole (see
+/// Sales.status); a return takes some units of some lines back and refunds
+/// what was actually paid for them.
+class SaleReturns extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get saleId => integer().references(Sales, #id)();
+  IntColumn get saleItemId => integer().references(SaleItems, #id)();
+  // Base units handed back.
+  IntColumn get qtyBaseUnits => integer()();
+  // What was given back for these units, after any discount share.
+  IntColumn get refundCents => integer()();
+  TextColumn get refundMethod => textEnum<PaymentMethod>()();
+  // False when the medicine cannot be resold (damaged, opened): stock is not added back.
+  BoolColumn get restocked => boolean().withDefault(const Constant(true))();
+  TextColumn get reason => text()();
+  // The owner or clinician who approved it.
+  IntColumn get approvedBy => integer().references(Users, #id)();
+  IntColumn get createdBy => integer().references(Users, #id)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+/// A sale set aside before payment, so the customer can come back to it.
+/// Holds no stock: quantities and prices are checked again when it is resumed.
+@DataClassName('HeldSaleRow')
+class HeldSales extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  // What the cashier typed to recognise it, for example a customer's name.
+  TextColumn get label => text().nullable()();
+  // The cart as JSON: [{"m": medicineId, "mode": "strip", "n": 3}, ...]
+  TextColumn get linesJson => text()();
+  IntColumn get discountCents => integer().withDefault(const Constant(0))();
+  // Who approved the discount (owner or clinician), if there is one.
+  IntColumn get discountApprovedBy =>
+      integer().nullable().references(Users, #id)();
+  IntColumn get parkedBy => integer().references(Users, #id)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
