@@ -7,6 +7,7 @@ import 'package:emuktan_pos/core/bootstrap.dart';
 import 'package:emuktan_pos/core/pin_hasher.dart';
 import 'package:emuktan_pos/data/auth_service.dart';
 import 'package:emuktan_pos/data/database.dart';
+import 'package:emuktan_pos/data/patient_service.dart';
 import 'package:emuktan_pos/data/sales_service.dart';
 import 'package:emuktan_pos/data/stock_service.dart';
 import 'package:emuktan_pos/data/tables.dart';
@@ -715,5 +716,97 @@ void main() {
       () => db.select(db.heldSales).getSingle(),
     ))!;
     expect(row.label!.length, lessThanOrEqualTo(40));
+  });
+
+  // ---- choosing a patient ------------------------------------------------
+
+  Future<void> registerPatient(WidgetTester tester, String name) async {
+    await tester.runAsync(
+      () => PatientService(
+        db,
+      ).register(PatientInput(fullName: name), userId: cashier.id),
+    );
+  }
+
+  Future<void> finishCashSale(WidgetTester tester) async {
+    await openPay(tester, 'Pay KES 10');
+    await tester.tap(inPanel(find.text('Exact')));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Complete sale'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('New sale'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a sale for a chosen patient is linked to them, then cleared', (
+    tester,
+  ) async {
+    await registerPatient(tester, 'Mary Wambui');
+    await signInAs(tester, 'Jane Doe', '1357');
+    await addFirstResult(tester);
+
+    await tester.tap(find.text('Add patient'));
+    await tester.pumpAndSettle();
+    await tester.enterText(field('Search name, phone or ID'), 'wamb');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mary Wambui'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mary Wambui'), findsOneWidget);
+    expect(find.text('Add patient'), findsNothing);
+
+    await finishCashSale(tester);
+    final sale = (await tester.runAsync(
+      () => db.select(db.sales).getSingle(),
+    ))!;
+    final patient = (await tester.runAsync(
+      () => db.select(db.patients).getSingle(),
+    ))!;
+    expect(sale.patientId, patient.id);
+
+    // The next sale starts with nobody chosen.
+    expect(find.text('Add patient'), findsOneWidget);
+    await addFirstResult(tester);
+    await finishCashSale(tester);
+    final sales = (await tester.runAsync(() => db.select(db.sales).get()))!;
+    expect(sales.last.patientId, isNull);
+  });
+
+  testWidgets('a patient can be removed from the sale before paying', (
+    tester,
+  ) async {
+    await registerPatient(tester, 'Mary Wambui');
+    await signInAs(tester, 'Jane Doe', '1357');
+    await addFirstResult(tester);
+    await tester.tap(find.text('Add patient'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mary Wambui'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Remove patient'));
+    await tester.pumpAndSettle();
+    await finishCashSale(tester);
+    final sale = (await tester.runAsync(
+      () => db.select(db.sales).getSingle(),
+    ))!;
+    expect(sale.patientId, isNull);
+  });
+
+  testWidgets('a new patient can be registered from the sale', (tester) async {
+    await signInAs(tester, 'Jane Doe', '1357');
+    await addFirstResult(tester);
+    await tester.tap(find.text('Add patient'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('New patient'));
+    await tester.pumpAndSettle();
+    await tester.enterText(field('Full name'), 'Peter Otieno');
+    await tester.tap(find.widgetWithText(FilledButton, 'Register'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Peter Otieno'), findsOneWidget); // chosen for the sale
+    await finishCashSale(tester);
+    final sale = (await tester.runAsync(
+      () => db.select(db.sales).getSingle(),
+    ))!;
+    expect(sale.patientId, isNotNull);
   });
 }

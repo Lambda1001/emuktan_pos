@@ -7,7 +7,6 @@ enum Destination {
   sales('Sales', Icons.receipt_long_outlined, Icons.receipt_long),
   patients('Patients', Icons.people_outline, Icons.people),
   stock('Stock', Icons.inventory_2_outlined, Icons.inventory_2),
-  timeClock('Time clock', Icons.schedule_outlined, Icons.schedule),
   reports('Reports', Icons.bar_chart_outlined, Icons.bar_chart),
   settings('Staff and settings', Icons.settings_outlined, Icons.settings);
 
@@ -28,7 +27,6 @@ enum Destination {
     Destination.sales => 'Past sales will appear here.',
     Destination.patients => 'Registered patients will appear here.',
     Destination.stock => 'Medicines and batches will appear here.',
-    Destination.timeClock => 'Clock in and out here.',
     Destination.reports => 'Sales and stock reports will appear here.',
     Destination.settings =>
       'Staff accounts and shop settings will appear here.',

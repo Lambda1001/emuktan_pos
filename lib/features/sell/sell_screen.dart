@@ -12,6 +12,7 @@ import '../../domain/cart.dart';
 import '../../domain/stock_rules.dart';
 import '../../ui/theme/app_tokens.dart';
 import '../../ui/widgets/error_line.dart';
+import '../patients/patient_picker.dart';
 import '../stock/stock_screen.dart' show stockProvider;
 import '../stock/stock_widgets.dart';
 import 'cart_state.dart';
@@ -111,6 +112,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
     );
     if (ok != true || !mounted) return;
     ref.read(cartProvider.notifier).clear();
+    ref.read(cartPatientProvider.notifier).set(null);
     setState(() => _discount = null);
     _toast('Sale parked. Find it under Parked.');
     _focusSearch();
@@ -185,6 +187,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
       return;
     }
     ref.read(cartProvider.notifier).clear();
+    ref.read(cartPatientProvider.notifier).set(null);
     setState(() => _discount = null);
     if (!mounted) return;
     await showDialog<bool>(
@@ -347,6 +350,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
                   TextButton(
                     onPressed: () {
                       cart.clear();
+                      ref.read(cartPatientProvider.notifier).set(null);
                       setState(() => _discount = null);
                     },
                     child: const Text('Clear sale'),
@@ -354,6 +358,7 @@ class _SellScreenState extends ConsumerState<SellScreen> {
               ],
             ),
           ),
+          _PatientRow(me: widget.me),
           if (items > 0 || parked > 0)
             Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -811,6 +816,59 @@ class _Stepper extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Who the sale is for: a button to choose a patient, or their name with
+/// a way to change it. Optional; walk-in sales need no patient.
+class _PatientRow extends ConsumerWidget {
+  const _PatientRow({required this.me});
+  final User me;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final patient = ref.watch(cartPatientProvider);
+    final t = Theme.of(context).textTheme;
+
+    Future<void> choose() async {
+      final p = await showDialog<Patient>(
+        context: context,
+        builder: (_) => PatientPickerDialog(me: me),
+      );
+      if (p != null) ref.read(cartPatientProvider.notifier).set(p);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Space.lg, 0, Space.sm, Space.sm),
+      child: Row(
+        children: [
+          Icon(
+            Icons.person_outline,
+            size: 18,
+            color: context.colors.textSecondary,
+          ),
+          const SizedBox(width: Space.sm),
+          if (patient == null)
+            TextButton(onPressed: choose, child: const Text('Add patient'))
+          else ...[
+            Flexible(
+              child: Text(
+                patient.fullName,
+                overflow: TextOverflow.ellipsis,
+                style: t.labelLarge,
+              ),
+            ),
+            TextButton(onPressed: choose, child: const Text('Change')),
+            IconButton(
+              tooltip: 'Remove patient',
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: () =>
+                  ref.read(cartPatientProvider.notifier).set(null),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

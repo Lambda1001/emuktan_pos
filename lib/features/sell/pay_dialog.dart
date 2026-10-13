@@ -10,6 +10,7 @@ import '../../data/tables.dart';
 import '../../domain/cart.dart';
 import '../../ui/theme/app_tokens.dart';
 import '../../ui/widgets/error_line.dart';
+import 'cart_state.dart' show cartPatientProvider;
 import 'sell_dialogs.dart' show Discount;
 
 /// Notes the customer is likely to hand over (Kenyan shillings), in KES.
@@ -148,6 +149,7 @@ class _PayDialogState extends ConsumerState<PayDialog> {
                 ? _cashCents
                 : null,
             mpesaCode: _mpesa.text,
+            patientId: ref.read(cartPatientProvider)?.id,
           );
       if (mounted) Navigator.of(context).pop(receipt);
     } on SaleRuleException catch (e) {

@@ -146,7 +146,7 @@ class _StaffFormDialogState extends ConsumerState<StaffFormDialog> {
 }
 
 String _roleHelp(Role r) => switch (r) {
-  Role.cashier => 'Sells, registers patients, receives stock, clocks in.',
+  Role.cashier => 'Sells, registers patients, receives stock.',
   Role.clinician =>
     'Everything a cashier does, with full patient records, and can approve discounts.',
   Role.owner =>

@@ -5719,308 +5719,6 @@ class PaymentsCompanion extends UpdateCompanion<Payment> {
   }
 }
 
-class $ClockEntriesTable extends ClockEntries
-    with TableInfo<$ClockEntriesTable, ClockEntry> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $ClockEntriesTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
-  @override
-  late final GeneratedColumn<int> userId = GeneratedColumn<int>(
-    'user_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES users (id)',
-    ),
-  );
-  static const VerificationMeta _clockInMeta = const VerificationMeta(
-    'clockIn',
-  );
-  @override
-  late final GeneratedColumn<DateTime> clockIn = GeneratedColumn<DateTime>(
-    'clock_in',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _clockOutMeta = const VerificationMeta(
-    'clockOut',
-  );
-  @override
-  late final GeneratedColumn<DateTime> clockOut = GeneratedColumn<DateTime>(
-    'clock_out',
-    aliasedName,
-    true,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [id, userId, clockIn, clockOut];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'clock_entries';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<ClockEntry> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('user_id')) {
-      context.handle(
-        _userIdMeta,
-        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_userIdMeta);
-    }
-    if (data.containsKey('clock_in')) {
-      context.handle(
-        _clockInMeta,
-        clockIn.isAcceptableOrUnknown(data['clock_in']!, _clockInMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_clockInMeta);
-    }
-    if (data.containsKey('clock_out')) {
-      context.handle(
-        _clockOutMeta,
-        clockOut.isAcceptableOrUnknown(data['clock_out']!, _clockOutMeta),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  ClockEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return ClockEntry(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      userId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}user_id'],
-      )!,
-      clockIn: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}clock_in'],
-      )!,
-      clockOut: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}clock_out'],
-      ),
-    );
-  }
-
-  @override
-  $ClockEntriesTable createAlias(String alias) {
-    return $ClockEntriesTable(attachedDatabase, alias);
-  }
-}
-
-class ClockEntry extends DataClass implements Insertable<ClockEntry> {
-  final int id;
-  final int userId;
-  final DateTime clockIn;
-  final DateTime? clockOut;
-  const ClockEntry({
-    required this.id,
-    required this.userId,
-    required this.clockIn,
-    this.clockOut,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['user_id'] = Variable<int>(userId);
-    map['clock_in'] = Variable<DateTime>(clockIn);
-    if (!nullToAbsent || clockOut != null) {
-      map['clock_out'] = Variable<DateTime>(clockOut);
-    }
-    return map;
-  }
-
-  ClockEntriesCompanion toCompanion(bool nullToAbsent) {
-    return ClockEntriesCompanion(
-      id: Value(id),
-      userId: Value(userId),
-      clockIn: Value(clockIn),
-      clockOut: clockOut == null && nullToAbsent
-          ? const Value.absent()
-          : Value(clockOut),
-    );
-  }
-
-  factory ClockEntry.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return ClockEntry(
-      id: serializer.fromJson<int>(json['id']),
-      userId: serializer.fromJson<int>(json['userId']),
-      clockIn: serializer.fromJson<DateTime>(json['clockIn']),
-      clockOut: serializer.fromJson<DateTime?>(json['clockOut']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'userId': serializer.toJson<int>(userId),
-      'clockIn': serializer.toJson<DateTime>(clockIn),
-      'clockOut': serializer.toJson<DateTime?>(clockOut),
-    };
-  }
-
-  ClockEntry copyWith({
-    int? id,
-    int? userId,
-    DateTime? clockIn,
-    Value<DateTime?> clockOut = const Value.absent(),
-  }) => ClockEntry(
-    id: id ?? this.id,
-    userId: userId ?? this.userId,
-    clockIn: clockIn ?? this.clockIn,
-    clockOut: clockOut.present ? clockOut.value : this.clockOut,
-  );
-  ClockEntry copyWithCompanion(ClockEntriesCompanion data) {
-    return ClockEntry(
-      id: data.id.present ? data.id.value : this.id,
-      userId: data.userId.present ? data.userId.value : this.userId,
-      clockIn: data.clockIn.present ? data.clockIn.value : this.clockIn,
-      clockOut: data.clockOut.present ? data.clockOut.value : this.clockOut,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('ClockEntry(')
-          ..write('id: $id, ')
-          ..write('userId: $userId, ')
-          ..write('clockIn: $clockIn, ')
-          ..write('clockOut: $clockOut')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(id, userId, clockIn, clockOut);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is ClockEntry &&
-          other.id == this.id &&
-          other.userId == this.userId &&
-          other.clockIn == this.clockIn &&
-          other.clockOut == this.clockOut);
-}
-
-class ClockEntriesCompanion extends UpdateCompanion<ClockEntry> {
-  final Value<int> id;
-  final Value<int> userId;
-  final Value<DateTime> clockIn;
-  final Value<DateTime?> clockOut;
-  const ClockEntriesCompanion({
-    this.id = const Value.absent(),
-    this.userId = const Value.absent(),
-    this.clockIn = const Value.absent(),
-    this.clockOut = const Value.absent(),
-  });
-  ClockEntriesCompanion.insert({
-    this.id = const Value.absent(),
-    required int userId,
-    required DateTime clockIn,
-    this.clockOut = const Value.absent(),
-  }) : userId = Value(userId),
-       clockIn = Value(clockIn);
-  static Insertable<ClockEntry> custom({
-    Expression<int>? id,
-    Expression<int>? userId,
-    Expression<DateTime>? clockIn,
-    Expression<DateTime>? clockOut,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (userId != null) 'user_id': userId,
-      if (clockIn != null) 'clock_in': clockIn,
-      if (clockOut != null) 'clock_out': clockOut,
-    });
-  }
-
-  ClockEntriesCompanion copyWith({
-    Value<int>? id,
-    Value<int>? userId,
-    Value<DateTime>? clockIn,
-    Value<DateTime?>? clockOut,
-  }) {
-    return ClockEntriesCompanion(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-      clockIn: clockIn ?? this.clockIn,
-      clockOut: clockOut ?? this.clockOut,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (userId.present) {
-      map['user_id'] = Variable<int>(userId.value);
-    }
-    if (clockIn.present) {
-      map['clock_in'] = Variable<DateTime>(clockIn.value);
-    }
-    if (clockOut.present) {
-      map['clock_out'] = Variable<DateTime>(clockOut.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('ClockEntriesCompanion(')
-          ..write('id: $id, ')
-          ..write('userId: $userId, ')
-          ..write('clockIn: $clockIn, ')
-          ..write('clockOut: $clockOut')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -7786,7 +7484,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $StockMovementsTable stockMovements = $StockMovementsTable(this);
   late final $SaleItemsTable saleItems = $SaleItemsTable(this);
   late final $PaymentsTable payments = $PaymentsTable(this);
-  late final $ClockEntriesTable clockEntries = $ClockEntriesTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
   late final $SyncOutboxTable syncOutbox = $SyncOutboxTable(this);
   late final $SaleReturnsTable saleReturns = $SaleReturnsTable(this);
@@ -7806,7 +7503,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     stockMovements,
     saleItems,
     payments,
-    clockEntries,
     settings,
     syncOutbox,
     saleReturns,
@@ -7947,24 +7643,6 @@ final class $$UsersTableReferences
     ).filter((f) => f.createdBy.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_stockMovementsRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$ClockEntriesTable, List<ClockEntry>>
-  _clockEntriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.clockEntries,
-    aliasName: 'users__id__clock_entries__user_id',
-  );
-
-  $$ClockEntriesTableProcessedTableManager get clockEntriesRefs {
-    final manager = $$ClockEntriesTableTableManager(
-      $_db,
-      $_db.clockEntries,
-    ).filter((f) => f.userId.id.sqlEquals($_itemColumn<int>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_clockEntriesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -8161,31 +7839,6 @@ class $$UsersTableFilterComposer extends Composer<_$AppDatabase, $UsersTable> {
           }) => $$StockMovementsTableFilterComposer(
             $db: $db,
             $table: $db.stockMovements,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> clockEntriesRefs(
-    Expression<bool> Function($$ClockEntriesTableFilterComposer f) f,
-  ) {
-    final $$ClockEntriesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.clockEntries,
-      getReferencedColumn: (t) => t.userId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ClockEntriesTableFilterComposer(
-            $db: $db,
-            $table: $db.clockEntries,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -8434,31 +8087,6 @@ class $$UsersTableAnnotationComposer
     );
     return f(composer);
   }
-
-  Expression<T> clockEntriesRefs<T extends Object>(
-    Expression<T> Function($$ClockEntriesTableAnnotationComposer a) f,
-  ) {
-    final $$ClockEntriesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.clockEntries,
-      getReferencedColumn: (t) => t.userId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$ClockEntriesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.clockEntries,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$UsersTableTableManager
@@ -8481,7 +8109,6 @@ class $$UsersTableTableManager
             bool medicinesRefs,
             bool batchesRefs,
             bool stockMovementsRefs,
-            bool clockEntriesRefs,
           })
         > {
   $$UsersTableTableManager(_$AppDatabase db, $UsersTable table)
@@ -8551,7 +8178,6 @@ class $$UsersTableTableManager
                 medicinesRefs = false,
                 batchesRefs = false,
                 stockMovementsRefs = false,
-                clockEntriesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -8562,7 +8188,6 @@ class $$UsersTableTableManager
                     if (medicinesRefs) db.medicines,
                     if (batchesRefs) db.batches,
                     if (stockMovementsRefs) db.stockMovements,
-                    if (clockEntriesRefs) db.clockEntries,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -8669,27 +8294,6 @@ class $$UsersTableTableManager
                               ),
                           typedResults: items,
                         ),
-                      if (clockEntriesRefs)
-                        await $_getPrefetchedData<
-                          User,
-                          $UsersTable,
-                          ClockEntry
-                        >(
-                          currentTable: table,
-                          referencedTable: $$UsersTableReferences
-                              ._clockEntriesRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$UsersTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).clockEntriesRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.userId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
                     ];
                   },
                 );
@@ -8717,7 +8321,6 @@ typedef $$UsersTableProcessedTableManager =
         bool medicinesRefs,
         bool batchesRefs,
         bool stockMovementsRefs,
-        bool clockEntriesRefs,
       })
     >;
 typedef $$PatientsTableCreateCompanionBuilder =
@@ -14509,298 +14112,6 @@ typedef $$PaymentsTableProcessedTableManager =
       Payment,
       PrefetchHooks Function({bool saleId})
     >;
-typedef $$ClockEntriesTableCreateCompanionBuilder =
-    ClockEntriesCompanion Function({
-      Value<int> id,
-      required int userId,
-      required DateTime clockIn,
-      Value<DateTime?> clockOut,
-    });
-typedef $$ClockEntriesTableUpdateCompanionBuilder =
-    ClockEntriesCompanion Function({
-      Value<int> id,
-      Value<int> userId,
-      Value<DateTime> clockIn,
-      Value<DateTime?> clockOut,
-    });
-
-final class $$ClockEntriesTableReferences
-    extends BaseReferences<_$AppDatabase, $ClockEntriesTable, ClockEntry> {
-  $$ClockEntriesTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $UsersTable _userIdTable(_$AppDatabase db) =>
-      db.users.createAlias('clock_entries__user_id__users__id');
-
-  $$UsersTableProcessedTableManager get userId {
-    final $_column = $_itemColumn<int>('user_id')!;
-
-    final manager = $$UsersTableTableManager(
-      $_db,
-      $_db.users,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_userIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$ClockEntriesTableFilterComposer
-    extends Composer<_$AppDatabase, $ClockEntriesTable> {
-  $$ClockEntriesTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get clockIn => $composableBuilder(
-    column: $table.clockIn,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get clockOut => $composableBuilder(
-    column: $table.clockOut,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$UsersTableFilterComposer get userId {
-    final $$UsersTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.userId,
-      referencedTable: $db.users,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UsersTableFilterComposer(
-            $db: $db,
-            $table: $db.users,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$ClockEntriesTableOrderingComposer
-    extends Composer<_$AppDatabase, $ClockEntriesTable> {
-  $$ClockEntriesTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get clockIn => $composableBuilder(
-    column: $table.clockIn,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get clockOut => $composableBuilder(
-    column: $table.clockOut,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$UsersTableOrderingComposer get userId {
-    final $$UsersTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.userId,
-      referencedTable: $db.users,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UsersTableOrderingComposer(
-            $db: $db,
-            $table: $db.users,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$ClockEntriesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ClockEntriesTable> {
-  $$ClockEntriesTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get clockIn =>
-      $composableBuilder(column: $table.clockIn, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get clockOut =>
-      $composableBuilder(column: $table.clockOut, builder: (column) => column);
-
-  $$UsersTableAnnotationComposer get userId {
-    final $$UsersTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.userId,
-      referencedTable: $db.users,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$UsersTableAnnotationComposer(
-            $db: $db,
-            $table: $db.users,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$ClockEntriesTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $ClockEntriesTable,
-          ClockEntry,
-          $$ClockEntriesTableFilterComposer,
-          $$ClockEntriesTableOrderingComposer,
-          $$ClockEntriesTableAnnotationComposer,
-          $$ClockEntriesTableCreateCompanionBuilder,
-          $$ClockEntriesTableUpdateCompanionBuilder,
-          (ClockEntry, $$ClockEntriesTableReferences),
-          ClockEntry,
-          PrefetchHooks Function({bool userId})
-        > {
-  $$ClockEntriesTableTableManager(_$AppDatabase db, $ClockEntriesTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$ClockEntriesTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$ClockEntriesTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$ClockEntriesTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<int> userId = const Value.absent(),
-                Value<DateTime> clockIn = const Value.absent(),
-                Value<DateTime?> clockOut = const Value.absent(),
-              }) => ClockEntriesCompanion(
-                id: id,
-                userId: userId,
-                clockIn: clockIn,
-                clockOut: clockOut,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required int userId,
-                required DateTime clockIn,
-                Value<DateTime?> clockOut = const Value.absent(),
-              }) => ClockEntriesCompanion.insert(
-                id: id,
-                userId: userId,
-                clockIn: clockIn,
-                clockOut: clockOut,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$ClockEntriesTable, ClockEntry>(table),
-                  $$ClockEntriesTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({userId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (userId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.userId,
-                                referencedTable: $$ClockEntriesTableReferences
-                                    ._userIdTable(db),
-                                referencedColumn: $$ClockEntriesTableReferences
-                                    ._userIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$ClockEntriesTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $ClockEntriesTable,
-      ClockEntry,
-      $$ClockEntriesTableFilterComposer,
-      $$ClockEntriesTableOrderingComposer,
-      $$ClockEntriesTableAnnotationComposer,
-      $$ClockEntriesTableCreateCompanionBuilder,
-      $$ClockEntriesTableUpdateCompanionBuilder,
-      (ClockEntry, $$ClockEntriesTableReferences),
-      ClockEntry,
-      PrefetchHooks Function({bool userId})
-    >;
 typedef $$SettingsTableCreateCompanionBuilder =
     SettingsCompanion Function({
       required String key,
@@ -16344,8 +15655,6 @@ class $AppDatabaseManager {
       $$SaleItemsTableTableManager(_db, _db.saleItems);
   $$PaymentsTableTableManager get payments =>
       $$PaymentsTableTableManager(_db, _db.payments);
-  $$ClockEntriesTableTableManager get clockEntries =>
-      $$ClockEntriesTableTableManager(_db, _db.clockEntries);
   $$SettingsTableTableManager get settings =>
       $$SettingsTableTableManager(_db, _db.settings);
   $$SyncOutboxTableTableManager get syncOutbox =>

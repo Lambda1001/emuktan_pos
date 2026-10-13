@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/auth_service.dart';
+import '../../data/patient_service.dart';
 import '../../data/stock_service.dart';
 import '../theme/app_tokens.dart';
 import 'error_line.dart';
@@ -10,6 +11,7 @@ import 'error_line.dart';
 String? userMessage(Object e) =>
     (e is PinPolicyException ||
         e is StaffRuleException ||
+        e is PatientRuleException ||
         e is StockRuleException)
     ? e.toString()
     : null;

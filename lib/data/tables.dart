@@ -168,12 +168,6 @@ class Payments extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
-class ClockEntries extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  IntColumn get userId => integer().references(Users, #id)();
-  DateTimeColumn get clockIn => dateTime()();
-  DateTimeColumn get clockOut => dateTime().nullable()();
-}
 
 class Settings extends Table {
   TextColumn get key => text()();

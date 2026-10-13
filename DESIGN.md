@@ -34,7 +34,6 @@ Sidebar, shown according to who is signed in:
 | Sell | yes | yes | yes |
 | Patients | register, search | full records | full records |
 | Stock | view, receive | view, receive | everything |
-| Time clock | own | own | everyone |
 | Reports | no | no | yes |
 | Staff and settings | no | no | yes |
 

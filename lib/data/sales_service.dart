@@ -78,6 +78,7 @@ class SalesService {
     required PaymentMethod method,
     int? cashTenderedCents,
     String? mpesaCode,
+    int? patientId,
   }) async {
     if (lines.isEmpty) throw SaleRuleException('The cart is empty.');
 
@@ -155,6 +156,7 @@ class SalesService {
             SalesCompanion.insert(
               receiptNo: receiptNo,
               cashierId: cashierId,
+              patientId: Value(patientId),
               subtotalCents: subtotal,
               discountCents: Value(discountCents),
               discountAuthorisedBy: Value(approver?.id),

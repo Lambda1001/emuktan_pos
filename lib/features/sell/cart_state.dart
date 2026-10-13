@@ -56,3 +56,19 @@ class CartNotifier extends Notifier<List<CartLine>> {
 final cartProvider = NotifierProvider<CartNotifier, List<CartLine>>(
   CartNotifier.new,
 );
+
+/// Who the open sale is for, if anyone. Like the cart, it starts empty
+/// whenever a different person signs in.
+class CartPatientNotifier extends Notifier<Patient?> {
+  @override
+  Patient? build() {
+    ref.watch(sessionProvider);
+    return null;
+  }
+
+  void set(Patient? p) => state = p;
+}
+
+final cartPatientProvider = NotifierProvider<CartPatientNotifier, Patient?>(
+  CartPatientNotifier.new,
+);

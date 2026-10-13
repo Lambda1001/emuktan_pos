@@ -82,3 +82,22 @@ DateTime? parseExpiry(String input) {
 /// "14:32" (24 hour, DESIGN.md section 9).
 String formatTime(DateTime d) =>
     '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
+/// Parses "DD/MM/YYYY" (or "D/M/YYYY") into a date. Null if it is not a real
+/// calendar date.
+DateTime? parseDate(String input) {
+  final m = RegExp(
+    r'^\s*(\d{1,2})\s*[/\-.]\s*(\d{1,2})\s*[/\-.]\s*(\d{4})\s*$',
+  ).firstMatch(input);
+  if (m == null) return null;
+  final day = int.parse(m.group(1)!);
+  final month = int.parse(m.group(2)!);
+  final year = int.parse(m.group(3)!);
+  if (year < 1900 || month < 1 || month > 12 || day < 1) return null;
+  final d = DateTime(year, month, day);
+  return d.month == month && d.day == day ? d : null;
+}
+
+/// "07/10/1990", the form [parseDate] reads back.
+String formatDateInput(DateTime d) =>
+    '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';

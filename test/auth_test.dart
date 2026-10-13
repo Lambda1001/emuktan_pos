@@ -158,7 +158,6 @@ void main() {
             Destination.sell,
             Destination.patients,
             Destination.stock,
-            Destination.timeClock,
           ]),
         );
         expect(d, isNot(contains(Destination.reports)));

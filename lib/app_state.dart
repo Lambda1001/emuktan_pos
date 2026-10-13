@@ -7,6 +7,8 @@ import 'data/auth_service.dart';
 import 'data/backup_service.dart';
 import 'data/database.dart';
 import 'data/held_sales_service.dart';
+import 'data/patient_service.dart';
+import 'data/report_service.dart';
 import 'data/sales_admin_service.dart';
 import 'data/sales_service.dart';
 import 'data/stock_service.dart';
@@ -89,4 +91,15 @@ final heldSalesServiceProvider = Provider<HeldSalesService>(
 /// Parked sales, oldest first. Refresh with `ref.invalidate` after any change.
 final heldSalesProvider = FutureProvider<List<HeldSale>>(
   (ref) => ref.watch(heldSalesServiceProvider).list(),
+);
+
+final patientServiceProvider = Provider<PatientService>(
+  (ref) => PatientService(ref.watch(appContextProvider)!.db),
+);
+
+final reportServiceProvider = Provider<ReportService>(
+  (ref) => ReportService(
+    ref.watch(appContextProvider)!.db,
+    ref.watch(stockServiceProvider),
+  ),
 );

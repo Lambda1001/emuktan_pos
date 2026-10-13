@@ -10,6 +10,8 @@ import '../../core/format.dart';
 import '../../data/database.dart';
 import '../../ui/theme/app_tokens.dart';
 import '../../ui/widgets/brand_mark.dart';
+import '../patients/patients_screen.dart';
+import '../reports/reports_screen.dart';
 import '../sales/sales_screen.dart';
 import '../sell/sell_screen.dart';
 import '../settings/settings_screen.dart';
@@ -224,6 +226,10 @@ class _Page extends StatelessWidget {
               ? SellScreen(me: user)
               : destination == Destination.sales
               ? SalesScreen(me: user)
+              : destination == Destination.patients
+              ? PatientsScreen(me: user)
+              : destination == Destination.reports
+              ? const ReportsScreen()
               : destination == Destination.stock
               ? StockScreen(me: user)
               : Card(

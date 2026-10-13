@@ -169,7 +169,7 @@ void main() {
     expect(await d.select(d.heldSales).get(), isEmpty); // the table is back
     expect((await d.select(d.users).get()).single.username, 'owner');
     final v = await d.customSelect('PRAGMA user_version').getSingle();
-    expect(v.data.values.first, 3);
+    expect(v.data.values.first, AppDatabase.currentSchemaVersion);
     await d.close();
   });
 }

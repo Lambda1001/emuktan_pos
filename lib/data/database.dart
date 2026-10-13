@@ -35,7 +35,6 @@ class WrongDatabaseKeyException implements Exception {
     Sales,
     SaleItems,
     Payments,
-    ClockEntries,
     Settings,
     SyncOutbox,
     SaleReturns,
@@ -54,7 +53,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// The newest schema this build understands. A backup made by a newer
   /// build is refused on restore rather than opened wrongly.
-  static const currentSchemaVersion = 3;
+  static const currentSchemaVersion = 4;
 
   @override
   int get schemaVersion => currentSchemaVersion;
@@ -67,6 +66,8 @@ class AppDatabase extends _$AppDatabase {
       if (from < 2) await m.createTable(saleReturns);
       // v3: sales set aside before payment.
       if (from < 3) await m.createTable(heldSales);
+      // v4: the time clock was dropped from the product.
+      if (from < 4) await customStatement('DROP TABLE IF EXISTS clock_entries');
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
