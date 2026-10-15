@@ -204,7 +204,11 @@ class _SalesTab extends ConsumerWidget {
                             header: const ['Cashier', 'Sales', 'Total'],
                             rows: [
                               for (final c in r.cashiers)
-                                [c.name, '${c.salesCount}', formatKes(c.totalCents)],
+                                [
+                                  c.name,
+                                  '${c.salesCount}',
+                                  formatKes(c.totalCents),
+                                ],
                             ],
                           ),
                         ],
@@ -251,7 +255,11 @@ class _StockTab extends ConsumerWidget {
                   spacing: Space.lg,
                   runSpacing: Space.lg,
                   children: [
-                    _Tile('Stock value at cost', formatKes(r.valueCents), big: true),
+                    _Tile(
+                      'Stock value at cost',
+                      formatKes(r.valueCents),
+                      big: true,
+                    ),
                     _Tile('Medicines', '${r.medicineCount}'),
                     _Tile('Low stock', '${r.low.length}'),
                     _Tile('Out of stock', '${r.outOfStock.length}'),

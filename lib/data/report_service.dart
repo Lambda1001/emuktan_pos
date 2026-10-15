@@ -148,7 +148,9 @@ class ReportService {
             _db.payments,
           )..where((p) => p.saleId.isIn(doneIds))).get();
     int paid(PaymentMethod m) =>
-        payments.where((p) => p.method == m).fold(0, (a, p) => a + p.amountCents) -
+        payments
+            .where((p) => p.method == m)
+            .fold(0, (a, p) => a + p.amountCents) -
         returns
             .where((r) => r.refundMethod == m)
             .fold(0, (a, r) => a + r.refundCents);
@@ -210,7 +212,8 @@ class ReportService {
       mpesaCents: paid(PaymentMethod.mpesa),
       topMedicines: top,
       days: [
-        for (final e in byDay.entries.toList()..sort((a, b) => b.key.compareTo(a.key)))
+        for (final e
+            in byDay.entries.toList()..sort((a, b) => b.key.compareTo(a.key)))
           DayTotal(
             day: e.key,
             salesCount: e.value.length,
@@ -242,10 +245,22 @@ class ReportService {
       }
     }
     return StockReport(
-      low: [for (final s in all) if (s.isLow && s.onHand > 0) s],
-      outOfStock: [for (final s in all) if (s.onHand == 0) s],
-      expiringSoon: [for (final s in all) if (s.expiresSoon) s],
-      expired: [for (final s in all) if (s.hasExpired) s],
+      low: [
+        for (final s in all)
+          if (s.isLow && s.onHand > 0) s,
+      ],
+      outOfStock: [
+        for (final s in all)
+          if (s.onHand == 0) s,
+      ],
+      expiringSoon: [
+        for (final s in all)
+          if (s.expiresSoon) s,
+      ],
+      expired: [
+        for (final s in all)
+          if (s.hasExpired) s,
+      ],
       valueCents: value,
       unpricedBatches: unpriced,
       medicineCount: all.length,
@@ -260,7 +275,9 @@ class ReportService {
     String d(DateTime x) =>
         '${x.year}-${x.month.toString().padLeft(2, '0')}-${x.day.toString().padLeft(2, '0')}';
     final b = StringBuffer()
-      ..writeln('Sales report,${d(r.from)} to ${d(r.to.subtract(const Duration(days: 1)))}')
+      ..writeln(
+        'Sales report,${d(r.from)} to ${d(r.to.subtract(const Duration(days: 1)))}',
+      )
       ..writeln('Sales,${r.salesCount}')
       ..writeln('Cancelled,${r.voidedCount}')
       ..writeln('Before discounts,${kes(r.grossCents)}')

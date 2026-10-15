@@ -30,10 +30,9 @@ final patientVisitsProvider = FutureProvider.autoDispose
       (ref, id) => ref.watch(patientServiceProvider).visits(id),
     );
 
-final patientSalesProvider = FutureProvider.autoDispose
-    .family<List<Sale>, int>(
-      (ref, id) => ref.watch(patientServiceProvider).sales(id),
-    );
+final patientSalesProvider = FutureProvider.autoDispose.family<List<Sale>, int>(
+  (ref, id) => ref.watch(patientServiceProvider).sales(id),
+);
 
 /// Register a patient ([existing] null) or change their details.
 class PatientFormDialog extends ConsumerStatefulWidget {
@@ -94,7 +93,8 @@ class _PatientFormDialogState extends ConsumerState<PatientFormDialog> {
       dob = parseDate(_dob.text);
       if (dob == null) {
         setState(
-          () => _error = 'Write the date of birth like 07/10/1990, or leave it empty.',
+          () => _error =
+              'Write the date of birth like 07/10/1990, or leave it empty.',
         );
         return;
       }
@@ -375,7 +375,11 @@ class _VisitDialogState extends ConsumerState<VisitDialog> {
 
 /// One patient: details, and for clinical staff the visits and notes.
 class PatientDetailDialog extends ConsumerWidget {
-  const PatientDetailDialog({super.key, required this.patientId, required this.me});
+  const PatientDetailDialog({
+    super.key,
+    required this.patientId,
+    required this.me,
+  });
   final int patientId;
   final User me;
 
@@ -387,7 +391,10 @@ class PatientDetailDialog extends ConsumerWidget {
     final clinical = canSeeClinical(me.role);
 
     Future<void> open(Widget dialog) async {
-      final ok = await showDialog<bool>(context: context, builder: (_) => dialog);
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => dialog,
+      );
       if (ok != true) return;
       ref
         ..invalidate(patientProvider(patientId))
@@ -437,10 +444,7 @@ class PatientDetailDialog extends ConsumerWidget {
           children: [
             _Fact('Phone', p.phone),
             _Fact('National ID', p.nationalId),
-            _Fact(
-              'Registered',
-              formatDate(p.createdAt),
-            ),
+            _Fact('Registered', formatDate(p.createdAt)),
             if (clinical) ...[
               const SizedBox(height: Space.md),
               const Divider(),
@@ -531,11 +535,18 @@ class _Fact extends StatelessWidget {
           SizedBox(width: 160, child: Text(label, style: t.bodySmall)),
           Expanded(
             child: value == null
-                ? Text('-', style: t.bodyMedium!.copyWith(color: c.textTertiary))
+                ? Text(
+                    '-',
+                    style: t.bodyMedium!.copyWith(color: c.textTertiary),
+                  )
                 : emphasise
                 ? Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded, size: 16, color: c.warning),
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 16,
+                        color: c.warning,
+                      ),
                       const SizedBox(width: Space.xs),
                       Expanded(child: Text(value!, style: t.bodyMedium)),
                     ],

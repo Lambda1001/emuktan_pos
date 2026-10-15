@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'tables.dart';
+import 'sync_triggers.dart';
 
 part 'database.g.dart';
 
@@ -53,14 +54,17 @@ class AppDatabase extends _$AppDatabase {
 
   /// The newest schema this build understands. A backup made by a newer
   /// build is refused on restore rather than opened wrongly.
-  static const currentSchemaVersion = 4;
+  static const currentSchemaVersion = 5;
 
   @override
   int get schemaVersion => currentSchemaVersion;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (m) => m.createAll(),
+    onCreate: (m) async {
+      await m.createAll();
+      await _createSyncTriggers();
+    },
     onUpgrade: (m, from, to) async {
       // v2: returns after a sale.
       if (from < 2) await m.createTable(saleReturns);
@@ -68,11 +72,19 @@ class AppDatabase extends _$AppDatabase {
       if (from < 3) await m.createTable(heldSales);
       // v4: the time clock was dropped from the product.
       if (from < 4) await customStatement('DROP TABLE IF EXISTS clock_entries');
+      // v5: changes to sales and stock are queued for the dashboard.
+      if (from < 5) await _createSyncTriggers();
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+
+  Future<void> _createSyncTriggers() async {
+    for (final sql in syncTriggerStatements()) {
+      await customStatement(sql);
+    }
+  }
 
   /// Writes an encrypted snapshot of the live database to [path].
   /// The file is encrypted with the same key (SQLCipher VACUUM INTO).

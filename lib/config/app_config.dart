@@ -43,3 +43,24 @@ abstract final class BackupConfig {
   /// The status bar turns amber when the last backup is older than this.
   static const Duration staleAfter = Duration(hours: 48);
 }
+
+/// Sync to the web dashboard (docs/dashboard/sync-protocol.md).
+abstract final class SyncConfig {
+  /// Sent with every push so the server knows which build is installed.
+  static const String appVersion = '1.0.0';
+
+  /// How often the running app tries to push while it is open.
+  static const Duration every = Duration(minutes: 5);
+
+  /// Rows per request. The server refuses more than this.
+  static const int batchSize = 500;
+
+  /// The status bar turns amber when nothing has got through for this long.
+  static const Duration staleAfter = Duration(hours: 24);
+
+  /// Sent rows are kept this long, then deleted from the outbox.
+  static const Duration keepSent = Duration(days: 30);
+
+  /// Give up on a request after this long (the clinic's connection is slow).
+  static const Duration requestTimeout = Duration(seconds: 20);
+}

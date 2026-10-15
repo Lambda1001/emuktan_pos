@@ -168,7 +168,6 @@ class Payments extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
-
 class Settings extends Table {
   TextColumn get key => text()();
   TextColumn get value => text()();

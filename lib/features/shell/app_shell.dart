@@ -266,9 +266,7 @@ class _StatusBar extends StatelessWidget {
     final style = Theme.of(context).textTheme.labelSmall!;
     return Row(
       children: [
-        Icon(Icons.cloud_off_outlined, size: 14, color: c.textSecondary),
-        const SizedBox(width: Space.xs),
-        Text('Working offline', style: style),
+        const _SyncIndicator(),
         const SizedBox(width: Space.lg),
         const _BackupIndicator(),
         const Spacer(),
@@ -358,6 +356,57 @@ class _BackupIndicator extends ConsumerWidget {
             size: 14,
             color: color,
           ),
+          const SizedBox(width: Space.xs),
+          Text(text, style: style.copyWith(color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dashboard sync in the status bar. Offline is normal, so a failed push stays
+/// quiet; it only turns amber when nothing has got through for 24 hours
+/// (DESIGN.md rule 7).
+class _SyncIndicator extends ConsumerWidget {
+  const _SyncIndicator();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(syncStatusProvider).value;
+    final c = context.colors;
+    final style = Theme.of(context).textTheme.labelSmall!;
+    final now = DateTime.now();
+
+    final IconData icon;
+    final String text;
+    var warn = false;
+    if (status == null || !status.configured) {
+      icon = Icons.cloud_off_outlined;
+      text = 'Dashboard not connected';
+    } else if (status.isStale(now)) {
+      icon = Icons.warning_amber_rounded;
+      warn = true;
+      final last = status.lastOkAt;
+      text = last == null
+          ? 'Not synced yet'
+          : 'Not synced since ${formatDate(last)} ${formatTime(last)}';
+    } else if (status.lastError != null) {
+      icon = Icons.cloud_off_outlined;
+      text = 'Working offline';
+    } else if (status.pending > 0) {
+      icon = Icons.cloud_upload_outlined;
+      text = '${status.pending} waiting to sync';
+    } else {
+      icon = Icons.cloud_done_outlined;
+      text = 'Synced ${formatTime(status.lastOkAt!)}';
+    }
+    final color = warn ? c.warning : c.textSecondary;
+    return Tooltip(
+      message: status?.lastError ?? 'Open Staff and settings, then Dashboard.',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
           const SizedBox(width: Space.xs),
           Text(text, style: style.copyWith(color: color)),
         ],

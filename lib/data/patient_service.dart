@@ -118,15 +118,18 @@ class PatientService {
           (p) =>
               p.fullName.like(like) |
               p.nationalId.like(like) |
-              (digits.length >= 3 ? p.phone.like('%$digits%') : p.id.equals(-1)),
+              (digits.length >= 3
+                  ? p.phone.like('%$digits%')
+                  : p.id.equals(-1)),
         )
         ..orderBy([(p) => OrderingTerm.asc(p.fullName)]);
     }
     return (select..limit(limit)).get();
   }
 
-  Future<Patient?> get(int id) =>
-      (_db.select(_db.patients)..where((p) => p.id.equals(id))).getSingleOrNull();
+  Future<Patient?> get(int id) => (_db.select(
+    _db.patients,
+  )..where((p) => p.id.equals(id))).getSingleOrNull();
 
   /// Visits newest first, each with its consultation notes.
   Future<List<VisitRecord>> visits(int patientId) async {
@@ -300,7 +303,10 @@ String? ageText(Patient p, DateTime now) {
   if (dob != null) {
     final y = ageFromDob(dob, now);
     if (y >= 2) return '$y years';
-    final months = (now.year - dob.year) * 12 + now.month - dob.month -
+    final months =
+        (now.year - dob.year) * 12 +
+        now.month -
+        dob.month -
         (now.day < dob.day ? 1 : 0);
     return months <= 0 ? 'under 1 month' : '$months months';
   }

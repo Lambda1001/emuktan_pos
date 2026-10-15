@@ -225,13 +225,39 @@ class ExpiredStockDialog extends StatelessWidget {
 }
 
 /// The finished sale, laid out as it prints on 80 mm paper.
-class ReceiptDialog extends StatelessWidget {
+class ReceiptDialog extends ConsumerStatefulWidget {
   const ReceiptDialog({super.key, required this.receipt});
   final SaleReceipt receipt;
 
   @override
+  ConsumerState<ReceiptDialog> createState() => _ReceiptDialogState();
+}
+
+class _ReceiptDialogState extends ConsumerState<ReceiptDialog> {
+  bool _printing = false;
+  String? _printed, _printError;
+
+  Future<void> _print(String text) async {
+    setState(() {
+      _printing = true;
+      _printError = null;
+    });
+    try {
+      final where = await ref
+          .read(receiptPrinterProvider)
+          .print(text, name: 'receipt-${widget.receipt.receiptNo}');
+      if (mounted) setState(() => _printed = where);
+    } catch (e) {
+      if (mounted) setState(() => _printError = 'Could not print: $e');
+    } finally {
+      if (mounted) setState(() => _printing = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final receipt = widget.receipt;
     final text = renderReceipt(receipt);
     return SheetFrame(
       maxWidth: 520,
@@ -244,6 +270,13 @@ class ReceiptDialog extends StatelessWidget {
       cancelLabel: 'Copy receipt',
       cancelPops: false,
       onCancel: () => Clipboard.setData(ClipboardData(text: text)),
+      error: _printError,
+      extraActions: [
+        OutlinedButton(
+          onPressed: _printing ? null : () => _print(text),
+          child: Text(_printed == null ? 'Print receipt' : 'Print again'),
+        ),
+      ],
       children: [
         Container(
           padding: const EdgeInsets.all(Space.lg),
@@ -268,7 +301,8 @@ class ReceiptDialog extends StatelessWidget {
         ),
         const SizedBox(height: Space.sm),
         Text(
-          'Receipt printing will be added once the printer is chosen.',
+          _printed ??
+              'No thermal printer is connected yet: Print saves the receipt as a PDF.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ],

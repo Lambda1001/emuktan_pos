@@ -4,6 +4,7 @@ import '../../data/database.dart';
 import '../../ui/theme/app_tokens.dart';
 import '../staff/staff_screen.dart';
 import 'backup_panel.dart';
+import 'sync_panel.dart';
 
 /// Owner-only: staff and backups.
 class SettingsScreen extends StatefulWidget {
@@ -14,7 +15,7 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-enum _Section { staff, backup }
+enum _Section { staff, backup, dashboard }
 
 class _SettingsScreenState extends State<SettingsScreen> {
   _Section _section = _Section.staff;
@@ -29,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           segments: const [
             ButtonSegment(value: _Section.staff, label: Text('Staff')),
             ButtonSegment(value: _Section.backup, label: Text('Backup')),
+            ButtonSegment(value: _Section.dashboard, label: Text('Dashboard')),
           ],
           selected: {_section},
           onSelectionChanged: (s) => setState(() => _section = s.single),
@@ -38,6 +40,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: switch (_section) {
             _Section.staff => StaffScreen(me: widget.me),
             _Section.backup => const BackupPanel(),
+            _Section.dashboard => const SyncPanel(),
           },
         ),
       ],

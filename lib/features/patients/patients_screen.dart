@@ -214,7 +214,9 @@ class _Row extends StatelessWidget {
       child: Text(
         text ?? '-',
         overflow: TextOverflow.ellipsis,
-        style: t.bodyMedium!.copyWith(color: text == null ? c.textTertiary : null),
+        style: t.bodyMedium!.copyWith(
+          color: text == null ? c.textTertiary : null,
+        ),
       ),
     );
     return InkWell(

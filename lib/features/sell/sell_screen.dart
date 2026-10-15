@@ -863,8 +863,7 @@ class _PatientRow extends ConsumerWidget {
             IconButton(
               tooltip: 'Remove patient',
               icon: const Icon(Icons.close, size: 18),
-              onPressed: () =>
-                  ref.read(cartPatientProvider.notifier).set(null),
+              onPressed: () => ref.read(cartPatientProvider.notifier).set(null),
             ),
           ],
         ],

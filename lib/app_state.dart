@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/bootstrap.dart';
+import 'core/receipt_printer.dart';
 import 'data/auth_service.dart';
 import 'data/backup_service.dart';
 import 'data/database.dart';
@@ -12,6 +13,7 @@ import 'data/report_service.dart';
 import 'data/sales_admin_service.dart';
 import 'data/sales_service.dart';
 import 'data/stock_service.dart';
+import 'data/sync_service.dart';
 
 /// Holds the open database once startup finishes. Null only during startup,
 /// when nothing that needs it is on screen yet.
@@ -102,4 +104,21 @@ final reportServiceProvider = Provider<ReportService>(
     ref.watch(appContextProvider)!.db,
     ref.watch(stockServiceProvider),
   ),
+);
+
+/// Where receipts print. A PDF for now; swap for the ESC/POS printer once the
+/// thermal printer model is chosen (see `ReceiptPrinter`).
+final receiptPrinterProvider = Provider<ReceiptPrinter>(
+  (ref) => const PdfReceiptPrinter(),
+);
+
+final syncServiceProvider = Provider<SyncService?>((ref) {
+  final app = ref.watch(appContextProvider);
+  if (app == null) return null;
+  return SyncService(app.db);
+});
+
+/// Queue size and last success. Refresh with `ref.invalidate`.
+final syncStatusProvider = FutureProvider<SyncStatus?>(
+  (ref) => ref.watch(syncServiceProvider)?.status(),
 );

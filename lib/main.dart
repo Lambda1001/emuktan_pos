@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -57,6 +58,8 @@ class _StartupState extends ConsumerState<_Startup> {
   bool _noticeSeen = false;
   bool _askFirstRun = false;
   Timer? _backupTimer;
+  Timer? _syncTimer;
+  AppLifecycleListener? _lifecycle;
 
   @override
   void initState() {
@@ -67,6 +70,8 @@ class _StartupState extends ConsumerState<_Startup> {
   @override
   void dispose() {
     _backupTimer?.cancel();
+    _syncTimer?.cancel();
+    _lifecycle?.dispose();
     super.dispose();
   }
 
@@ -92,6 +97,7 @@ class _StartupState extends ConsumerState<_Startup> {
         ref.read(appContextProvider.notifier).set(app);
         setState(() => _app = app);
         _startBackups();
+        _startSync();
       },
       onError: (Object e) {
         if (mounted) setState(() => _error = e);
@@ -110,6 +116,29 @@ class _StartupState extends ConsumerState<_Startup> {
 
     check();
     _backupTimer = Timer.periodic(BackupConfig.checkEvery, (_) => check());
+  }
+
+  /// Push to the dashboard now, then every few minutes while the app is open,
+  /// and once more as the window closes (the PC may be off overnight). A
+  /// failure is recorded and shown in the status bar, never as a dialog.
+  void _startSync() {
+    final svc = ref.read(syncServiceProvider);
+    if (svc == null) return;
+    Future<void> push() async {
+      await svc.syncNow();
+      if (mounted) ref.invalidate(syncStatusProvider);
+    }
+
+    push();
+    _syncTimer = Timer.periodic(SyncConfig.every, (_) => push());
+    _lifecycle = AppLifecycleListener(
+      onExitRequested: () async {
+        try {
+          await svc.syncNow().timeout(const Duration(seconds: 5));
+        } catch (_) {}
+        return AppExitResponse.exit;
+      },
+    );
   }
 
   @override
