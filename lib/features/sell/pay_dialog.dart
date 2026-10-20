@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app_state.dart';
 import '../../core/format.dart';
 import '../../data/database.dart';
+import '../../data/mpesa_stk_service.dart';
 import '../../data/sales_service.dart';
 import '../../data/tables.dart';
 import '../../domain/cart.dart';
@@ -48,11 +51,112 @@ class _PayDialogState extends ConsumerState<PayDialog> {
   String? _error;
   bool _busy = false;
 
+  // ---- M-Pesa prompt (needs the dashboard; the typed code always works) ----
+  final _phone = TextEditingController();
+  bool _promptsOn = false;
+  String? _requestId;
+  StkStatus? _stk;
+  String? _stkError;
+  bool _sending = false;
+  Timer? _poller;
+  DateTime? _askedAt;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(mpesaStkServiceProvider)?.available().then((on) {
+      if (mounted) setState(() => _promptsOn = on);
+    });
+  }
+
   @override
   void dispose() {
+    _poller?.cancel();
+    _phone.dispose();
     _keys.dispose();
     _mpesa.dispose();
     super.dispose();
+  }
+
+  bool get _waiting =>
+      _sending || (_stk != null && _stk!.state == StkState.pending);
+  bool get _paidByPrompt => _stk?.state == StkState.success;
+
+  Future<void> _sendPrompt() async {
+    final svc = ref.read(mpesaStkServiceProvider);
+    if (svc == null || _waiting) return;
+    // A new attempt after a final answer gets a new id; a retry after a lost
+    // connection reuses the id, so it can never send a second prompt.
+    _requestId ??= svc.newRequestId();
+    setState(() {
+      _sending = true;
+      _stkError = null;
+      _error = null;
+    });
+    try {
+      final s = await svc.start(
+        requestId: _requestId!,
+        amountCents: _total,
+        phone: _phone.text,
+      );
+      _askedAt = DateTime.now();
+      _take(s);
+    } on StkException catch (e) {
+      if (mounted) setState(() => _stkError = e.message);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  void _take(StkStatus s) {
+    if (!mounted) return;
+    setState(() {
+      _stk = s;
+      if (s.state == StkState.success) _mpesa.text = s.receipt!;
+    });
+    _poller?.cancel();
+    if (s.state == StkState.pending) {
+      _poller = Timer.periodic(const Duration(seconds: 3), (_) => _tick());
+    }
+  }
+
+  Future<void> _tick() async {
+    final id = _requestId;
+    final svc = ref.read(mpesaStkServiceProvider);
+    if (id == null || svc == null) return;
+    try {
+      _take(await svc.check(id));
+    } on StkException catch (e) {
+      // A dropped connection while waiting is not an answer: keep asking.
+      if (mounted) setState(() => _stkError = e.message);
+      final asked = _askedAt;
+      if (asked != null &&
+          DateTime.now().difference(asked) > const Duration(seconds: 150)) {
+        _poller?.cancel();
+        if (mounted) setState(() => _stk = null);
+      }
+    }
+  }
+
+  /// Give up on this prompt. A payment made later still reaches the dashboard
+  /// (System page) but is not attached to this sale.
+  void _stopWaiting() {
+    _poller?.cancel();
+    setState(() {
+      _stk = null;
+      _requestId = null;
+      _stkError = null;
+    });
+  }
+
+  void _tryAgain() {
+    _poller?.cancel();
+    setState(() {
+      _stk = null;
+      _requestId = null;
+      _stkError = null;
+      _mpesa.clear();
+    });
   }
 
   int get _total => widget.totalCents;
@@ -65,9 +169,10 @@ class _PayDialogState extends ConsumerState<PayDialog> {
     );
   }
 
+  // While a prompt is out, completing with a typed code could take the money twice.
   bool get _canComplete => _method == PaymentMethod.cash
       ? (_cashCents ?? -1) >= _total
-      : _mpesa.text.trim().length >= 8;
+      : !_waiting && _mpesa.text.trim().length >= 8;
 
   void _press(String k) {
     if (_busy) return;
@@ -158,6 +263,124 @@ class _PayDialogState extends ConsumerState<PayDialog> {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  /// The "ask the customer to pay on their phone" part of the M-Pesa tab.
+  Widget _promptBox(TextTheme t, AppColors c) {
+    if (!MpesaStkService.canPrompt(_total)) {
+      return Text(
+        'A phone prompt needs a whole number of shillings. Type the code instead.',
+        style: t.bodySmall,
+      );
+    }
+    final s = _stk;
+    if (s != null && s.state == StkState.success) {
+      return Row(
+        children: [
+          Icon(Icons.check_circle, color: c.success),
+          const SizedBox(width: Space.sm),
+          Expanded(
+            child: Text(
+              'Paid ${formatKes(_total, alwaysCents: true)}. M-Pesa code ${s.receipt}',
+              style: t.titleMedium,
+            ),
+          ),
+        ],
+      );
+    }
+    if (_waiting) {
+      final who = s?.phone != null ? ' (${s!.phone})' : '';
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: Space.md),
+              Expanded(
+                child: Text(
+                  'Waiting for the customer to enter their M-Pesa PIN$who…',
+                  style: t.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+          if (_stkError != null) ...[
+            const SizedBox(height: Space.sm),
+            ErrorLine('$_stkError Still trying.'),
+          ],
+          const SizedBox(height: Space.sm),
+          TextButton(
+            onPressed: _stopWaiting,
+            child: const Text('Stop waiting'),
+          ),
+        ],
+      );
+    }
+    final answered = s != null; // an answer that is not success
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (answered) ...[
+          ErrorLine(_stkMessage(s)),
+          const SizedBox(height: Space.sm),
+        ],
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                onChanged: (_) => setState(() => _stkError = null),
+                onSubmitted: (_) {
+                  if (_phone.text.trim().length >= 9) _sendPrompt();
+                },
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9+ ]')),
+                  LengthLimitingTextInputFormatter(16),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Customer phone',
+                  helperText:
+                      'Sends a prompt to their phone, for example 0712 345 678',
+                ),
+              ),
+            ),
+            const SizedBox(width: Space.md),
+            FilledButton.tonal(
+              onPressed: _phone.text.trim().length >= 9 ? _sendPrompt : null,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, Hit.counter),
+              ),
+              child: Text(answered ? 'Send again' : 'Send prompt'),
+            ),
+          ],
+        ),
+        if (_stkError != null) ...[
+          const SizedBox(height: Space.sm),
+          ErrorLine('$_stkError You can still type the M-Pesa code below.'),
+        ],
+        if (answered)
+          TextButton(
+            onPressed: _tryAgain,
+            child: const Text('Clear this attempt'),
+          ),
+      ],
+    );
+  }
+
+  String _stkMessage(StkStatus s) => switch (s.state) {
+    StkState.cancelled => 'The customer cancelled the prompt.',
+    StkState.timeout =>
+      'No answer yet. If the customer pays now, it shows on the dashboard; otherwise send again.',
+    StkState.review =>
+      'Do not treat this as paid. ${s.message ?? ''} Check the M-Pesa statement, then type the code if the money arrived.',
+    _ => 'The payment did not go through. ${s.message ?? ''}'.trim(),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -257,9 +480,21 @@ class _PayDialogState extends ConsumerState<PayDialog> {
                                     style: t.bodySmall,
                                   ),
                               ] else ...[
+                                if (_promptsOn) ...[
+                                  _promptBox(t, c),
+                                  const SizedBox(height: Space.xl),
+                                  Text(
+                                    _paidByPrompt
+                                        ? 'Confirmed by M-Pesa'
+                                        : "Or type the code from the customer's M-Pesa message",
+                                    style: t.bodySmall,
+                                  ),
+                                  const SizedBox(height: Space.sm),
+                                ],
                                 TextField(
                                   controller: _mpesa,
-                                  autofocus: true,
+                                  readOnly: _paidByPrompt,
+                                  autofocus: !_promptsOn,
                                   onChanged: (_) =>
                                       setState(() => _error = null),
                                   onSubmitted: (_) {
@@ -317,7 +552,7 @@ class _PayDialogState extends ConsumerState<PayDialog> {
                   runSpacing: Space.sm,
                   children: [
                     OutlinedButton(
-                      onPressed: _busy
+                      onPressed: (_busy || _waiting)
                           ? null
                           : () => Navigator.of(context).pop(),
                       child: const Text('Back to sale'),

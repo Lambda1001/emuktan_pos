@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emuktan dashboard layout</title>
+<style>
+:root{
+  --accent:#0A64AD;--on-accent:#fff;--accent-soft:#E2EFFA;
+  --window:#F4F5F7;--surface:#fff;--text:#1B1F24;--muted:#5B6570;--sep:#E1E4E8;
+  --ok:#1E7A3E;--warn:#9A6200;--warn-bg:#FFF3D6;--crit:#B42318;--crit-bg:#FDE7E4;
+  --bar:#0A64AD;--bar2:#7FB4E0;
+}
+@media (prefers-color-scheme:dark){:root{
+  --accent:#59AEF0;--on-accent:#0B1520;--accent-soft:#1B3144;
+  --window:#14171A;--surface:#1D2126;--text:#E9ECEF;--muted:#9AA4AF;--sep:#2C3239;
+  --ok:#5CC47F;--warn:#F0B450;--warn-bg:#3A2D12;--crit:#FF8A80;--crit-bg:#3C1B18;
+  --bar:#59AEF0;--bar2:#2F6C9E;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--window);color:var(--text);
+  font:14px/1.45 "Segoe UI Variable","Segoe UI",system-ui,sans-serif}
+.num{font-variant-numeric:tabular-nums}
+header{background:var(--surface);border-bottom:1px solid var(--sep);position:sticky;top:0;z-index:2}
+.bar{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:17px;color:var(--accent)}
+nav{display:flex;gap:4px;flex:1}
+nav a{padding:8px 14px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:600}
+nav a[aria-current=page]{background:var(--accent-soft);color:var(--accent)}
+.who{color:var(--muted);font-size:12px}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.banner{padding:10px 14px;border-radius:10px;margin-bottom:16px;font-size:13px;display:flex;gap:8px;align-items:center}
+.banner.ok{background:var(--accent-soft)}
+.banner.stale{background:var(--warn-bg);color:var(--warn);font-weight:600}
+h1{font-size:20px;margin:0 0 12px}
+h2{font-size:15px;margin:0 0 10px}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:12px}
+.two{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.card{background:var(--surface);border-radius:12px;padding:16px;border:1px solid var(--sep)}
+.kpi .v{font-size:26px;font-weight:700}
+.kpi .l{color:var(--muted);font-size:12px;font-weight:500}
+.kpi .d{font-size:12px;margin-top:2px;color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+th{font-size:12px;color:var(--muted);text-align:left;font-weight:500;padding:6px 8px;border-bottom:1px solid var(--sep)}
+td{padding:9px 8px;border-bottom:1px solid var(--sep)}
+td.r,th.r{text-align:right}
+tr:last-child td{border-bottom:0}
+.chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.crit{background:var(--crit-bg);color:var(--crit)}
+.chip.ok{background:var(--accent-soft);color:var(--accent)}
+.split{display:flex;height:12px;border-radius:6px;overflow:hidden;margin:8px 0}
+.split i{display:block}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.filters input,.filters select,button{font:inherit;padding:8px 12px;border-radius:8px;border:1px solid var(--sep);background:var(--surface);color:var(--text)}
+button.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:600}
+.login{max-width:360px;margin:12vh auto;padding:0 16px}
+.login label{display:block;font-weight:600;margin:12px 0 4px}
+.login input{width:100%}
+.note{color:var(--muted);font-size:12px;margin-top:10px}
+.view{display:none}.view:target,.view.default{display:block}
+body:has(.view:target) .view.default{display:none}
+.scroll{overflow-x:auto}
+@media (max-width:560px){.hide-s{display:none}}
+</style>
+</head>
+<body>
+<!-- Layout mockup. Every number below is SAMPLE DATA. -->
+
+<!-- ===== Sign in ===== -->
+<section class="view" id="login">
+  <div class="login">
+    <div class="brand" style="font-size:24px">Emuktan</div>
+    <p class="note" style="margin-top:2px">Dispensary dashboard</p>
+    <div class="card">
+      <label for="e">Email</label><input id="e" type="email" autocomplete="username">
+      <label for="p">Password</label><input id="p" type="password" autocomplete="current-password">
+      <label for="c">Code from your authenticator app</label><input id="c" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+      <p style="margin:16px 0 0"><button class="primary" style="width:100%">Sign in</button></p>
+      <p class="note">Five wrong attempts lock the account for 15 minutes. Sessions end after 30 minutes idle.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== App shell (shown for the three pages) ===== -->
+<header><div class="bar">
+  <span class="brand">Emuktan</span>
+  <nav>
+    <a href="#overview">Overview</a><a href="#sales">Sales</a><a href="#stock">Stock</a>
+  </nav>
+  <span class="who">Dr. Sample · <a href="#login" style="color:inherit">Sign out</a></span>
+</div></header>
+
+<main>
+<!-- Sync status: always the first thing, because stale numbers must not look current. -->
+<div class="banner ok" role="status">Last synced from the clinic <b>4 minutes ago</b>. Figures are as of then.</div>
+<!-- When no sync for 24 h, the same banner becomes:
+<div class="banner stale" role="status">No sync from the clinic since yesterday 17:42. Sales made since then are not shown.</div> -->
+
+<!-- ===== Overview ===== -->
+<section class="view default" id="overview">
+  <h1>Today</h1>
+  <div class="grid kpis">
+    <div class="card kpi"><div class="l">Sales today</div><div class="v num">KES 48,250</div><div class="d num">37 sales</div></div>
+    <div class="card kpi"><div class="l">Cash</div><div class="v num">KES 31,400</div><div class="d">65%</div></div>
+    <div class="card kpi"><div class="l">M-Pesa</div><div class="v num">KES 16,850</div><div class="d">35%</div></div>
+    <div class="card kpi"><div class="l">Needs attention</div><div class="v num">9</div><div class="d">6 low stock · 3 expiring</div></div>
+  </div>
+
+  <div class="grid two">
+    <div class="card">
+      <h2>Last 14 days</h2>
+      <svg viewBox="0 0 420 150" width="100%" role="img" aria-label="Daily sales, last 14 days. Highest 62,400 shillings on 8 October; today 48,250.">
+        <g stroke="var(--sep)"><line x1="0" y1="120" x2="420" y2="120"/><line x1="0" y1="70" x2="420" y2="70" stroke-dasharray="3 4"/><line x1="0" y1="20" x2="420" y2="20" stroke-dasharray="3 4"/></g>
+        <g fill="var(--bar2)">
+          <rect x="6" y="62" width="20" height="58" rx="3"/><rect x="36" y="50" width="20" height="70" rx="3"/>
+          <rect x="66" y="58" width="20" height="62" rx="3"/><rect x="96" y="44" width="20" height="76" rx="3"/>
+          <rect x="126" y="70" width="20" height="50" rx="3"/><rect x="156" y="84" width="20" height="36" rx="3"/>
+          <rect x="186" y="20" width="20" height="100" rx="3"/><rect x="216" y="48" width="20" height="72" rx="3"/>
+          <rect x="246" y="40" width="20" height="80" rx="3"/><rect x="276" y="54" width="20" height="66" rx="3"/>
+          <rect x="306" y="46" width="20" height="74" rx="3"/><rect x="336" y="76" width="20" height="44" rx="3"/>
+          <rect x="366" y="60" width="20" height="60" rx="3"/></g>
+        <rect x="396" y="42" width="20" height="78" rx="3" fill="var(--bar)"/>
+        <g fill="var(--muted)" font-size="10"><text x="0" y="140">2 Oct</text><text x="186" y="140">8 Oct</text><text x="380" y="140">Today</text></g>
+      </svg>
+      <p class="note" style="margin-top:0">KES 0 – 62,400. Sundays and closed days show as gaps.</p>
+    </div>
+
+    <div class="card">
+      <h2>How customers paid, this week</h2>
+      <div class="split" role="img" aria-label="62 percent cash, 38 percent M-Pesa">
+        <i style="width:62%;background:var(--bar)"></i><i style="width:38%;background:var(--bar2)"></i></div>
+      <div class="legend"><span><span class="dot" style="background:var(--bar)"></span>Cash 62%</span><span><span class="dot" style="background:var(--bar2)"></span>M-Pesa 38%</span></div>
+      <h2 style="margin-top:18px">Top medicines this week</h2>
+      <table>
+        <tr><th>Medicine</th><th class="r">Sold</th><th class="r">KES</th></tr>
+        <tr><td>Paracetamol 500mg</td><td class="r num">840 tabs</td><td class="r num">4,200</td></tr>
+        <tr><td>Amoxicillin 500mg</td><td class="r num">360 caps</td><td class="r num">10,800</td></tr>
+        <tr><td>ORS sachets</td><td class="r num">96</td><td class="r num">4,800</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Sales ===== -->
+<section class="view" id="sales">
+  <h1>Sales</h1>
+  <div class="filters">
+    <select aria-label="Period"><option>Today</option><option>Yesterday</option><option>This week</option><option>This month</option><option>Custom range…</option></select>
+    <select aria-label="Payment"><option>All payments</option><option>Cash</option><option>M-Pesa</option></select>
+    <select aria-label="Served by"><option>All staff</option><option>Jane Doe</option></select>
+    <input type="search" placeholder="Receipt number" aria-label="Receipt number">
+    <button>Download CSV</button>
+  </div>
+  <div class="card scroll">
+    <table>
+      <tr><th>Receipt</th><th>Time</th><th class="hide-s">Served by</th><th>Paid</th><th class="r">Total (KES)</th><th></th></tr>
+      <tr><td class="num">R20261015-0037</td><td class="num">17:31</td><td class="hide-s">Jane Doe</td><td>M-Pesa</td><td class="r num">1,250.00</td><td></td></tr>
+      <tr><td class="num">R20261015-0036</td><td class="num">17:12</td><td class="hide-s">Jane Doe</td><td>Cash</td><td class="r num">380.00</td><td><span class="chip warn">Discount</span></td></tr>
+      <tr><td class="num">R20261015-0035</td><td class="num">16:58</td><td class="hide-s">Peter Otieno</td><td>Cash</td><td class="r num">90.00</td><td><span class="chip crit">Voided</span></td></tr>
+      <tr><td class="num">R20261015-0034</td><td class="num">16:40</td><td class="hide-s">Jane Doe</td><td>Cash</td><td class="r num">2,100.00</td><td><span class="chip ok">Part refunded</span></td></tr>
+    </table>
+    <p class="note">Tap a row for its items. No patient names are stored on this site.</p>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h2>R20261015-0036 <span class="note">(detail, opens when a row is tapped)</span></h2>
+    <table>
+      <tr><th>Item</th><th class="r">Qty</th><th class="r">KES</th></tr>
+      <tr><td>Amoxicillin 500mg</td><td class="r num">2 strips</td><td class="r num">200.00</td></tr>
+      <tr><td>Paracetamol 500mg</td><td class="r num">20 tabs</td><td class="r num">200.00</td></tr>
+      <tr><td colspan="2">Discount (approved by Dr. Sample)</td><td class="r num">−20.00</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ===== Stock ===== -->
+<section class="view" id="stock">
+  <h1>Stock</h1>
+  <div class="grid kpis">
+    <div class="card kpi"><div class="l">Medicines</div><div class="v num">312</div></div>
+    <div class="card kpi"><div class="l">Low stock</div><div class="v num">6</div></div>
+    <div class="card kpi"><div class="l">Expiring in 90 days</div><div class="v num">3</div></div>
+    <div class="card kpi"><div class="l">Stock value at cost</div><div class="v num">KES 842,300</div><div class="d">4 batches have no cost entered</div></div>
+  </div>
+  <div class="filters">
+    <input type="search" placeholder="Search medicine" aria-label="Search medicine">
+    <select aria-label="Show"><option>Needs attention</option><option>All</option><option>Low stock</option><option>Expiring soon</option><option>Expired</option><option>Out of stock</option></select>
+  </div>
+  <div class="card scroll">
+    <table>
+      <tr><th>Medicine</th><th class="r">On hand</th><th class="hide-s r">Alert at</th><th>Next expiry</th><th>Status</th></tr>
+      <tr><td>Amoxicillin 500mg</td><td class="r num">48 caps</td><td class="hide-s r num">100</td><td class="num">Mar 2027</td><td><span class="chip warn">Low</span></td></tr>
+      <tr><td>Metronidazole 400mg</td><td class="r num">0 tabs</td><td class="hide-s r num">60</td><td class="num">—</td><td><span class="chip crit">Out</span></td></tr>
+      <tr><td>Cetirizine 10mg</td><td class="r num">220 tabs</td><td class="hide-s r num">50</td><td class="num">Nov 2026</td><td><span class="chip warn">Expires in 27 days</span></td></tr>
+      <tr><td>ORS sachets</td><td class="r num">180</td><td class="hide-s r num">40</td><td class="num">Jan 2026</td><td><span class="chip crit">Expired</span></td></tr>
+    </table>
+  </div>
+  <p class="note">Read-only. Receiving, adjustments and write-offs are done at the clinic.</p>
+</section>
+</main>
+
+<script>
+// Mockup only: pick the active nav link from the hash, hide the shell on the sign-in view.
+function sync(){
+  const h=location.hash||'#overview';
+  document.querySelectorAll('nav a').forEach(a=>{
+    if(a.getAttribute('href')===h)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');
+  });
+  const login=h==='#login';
+  document.querySelector('header').style.display=login?'none':'';
+  document.querySelector('main').style.display=login?'none':'';
+  document.getElementById('login').style.display=login?'block':'none';
+}
+addEventListener('hashchange',sync);sync();
+</script>
+</body>
+</html>

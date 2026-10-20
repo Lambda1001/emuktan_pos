@@ -19,6 +19,10 @@ class SyncReply {
 abstract class SyncTransport {
   Future<SyncReply> get(Uri url, String key);
   Future<SyncReply> post(Uri url, String key, Object body);
+
+  /// Sends [file] as the raw request body (`application/octet-stream`),
+  /// streamed from disk so a large backup is never held in memory.
+  Future<SyncReply> postFile(Uri url, String key, File file);
 }
 
 class HttpSyncTransport implements SyncTransport {
@@ -29,13 +33,22 @@ class HttpSyncTransport implements SyncTransport {
   Future<SyncReply> post(Uri url, String key, Object body) =>
       _send('POST', url, key, body);
 
+  @override
+  Future<SyncReply> postFile(Uri url, String key, File file) =>
+      _send('POST', url, key, null, file: file);
+
   Future<SyncReply> _send(
     String method,
     Uri url,
     String key,
-    Object? body,
-  ) async {
+    Object? body, {
+    File? file,
+  }) async {
     final client = HttpClient()..connectionTimeout = SyncConfig.requestTimeout;
+    // A backup is tens of megabytes over a slow line: allow far longer than a sync.
+    final wait = file == null
+        ? SyncConfig.requestTimeout
+        : SyncConfig.uploadTimeout;
     try {
       final req = await client
           .openUrl(method, url)
@@ -46,11 +59,13 @@ class HttpSyncTransport implements SyncTransport {
         req.headers.contentType = ContentType.json;
         req.add(utf8.encode(jsonEncode(body)));
       }
-      final res = await req.close().timeout(SyncConfig.requestTimeout);
-      final text = await res
-          .transform(utf8.decoder)
-          .join()
-          .timeout(SyncConfig.requestTimeout);
+      if (file != null) {
+        req.headers.contentType = ContentType.binary;
+        req.contentLength = await file.length();
+        await req.addStream(file.openRead()).timeout(wait);
+      }
+      final res = await req.close().timeout(wait);
+      final text = await res.transform(utf8.decoder).join().timeout(wait);
       Map<String, dynamic>? json;
       try {
         final d = jsonDecode(text);
@@ -131,6 +146,18 @@ class SyncService {
   static const _kBackfilled = 'sync.backfilled';
   static const _kLastOk = 'sync.lastOkAt';
   static const _kLastError = 'sync.lastError';
+  static const _kMpesaStk = 'sync.mpesaStk';
+
+  /// Does the dashboard offer M-Pesa prompts? It says so in every ping and
+  /// sync reply; the last answer is remembered so the pay screen needs no
+  /// network call to decide whether to show the option.
+  Future<bool> mpesaPromptsAvailable() async =>
+      await config() != null && await _get(_kMpesaStk) == '1';
+
+  Future<void> _noteFeatures(Map<String, dynamic>? json) async {
+    final f = json?['features'];
+    if (f is Map) await _set(_kMpesaStk, f['mpesa_stk'] == true ? '1' : '0');
+  }
 
   Future<String?> _get(String key) async => (await (_db.select(
     _db.settings,
@@ -197,6 +224,7 @@ class SyncService {
   Future<void> clear() async {
     await _set(_kUrl, null);
     await _set(_kKey, null);
+    await _set(_kMpesaStk, null);
   }
 
   Future<SyncStatus> status() async {
@@ -232,6 +260,7 @@ class SyncService {
           'The dashboard answered with an error (${r.status}).',
         );
       }
+      await _noteFeatures(r.json);
       return (r.json?['clinic'] as String?) ?? 'connected';
     } on SocketException {
       throw SyncException(
@@ -283,6 +312,7 @@ class SyncService {
             SyncOutcome.rejected,
           );
         }
+        await _noteFeatures(reply.json);
         if (rows.isNotEmpty) {
           await (_db.update(_db.syncOutbox)
                 ..where((r) => r.id.isIn(rows.map((r) => r.id).toList())))

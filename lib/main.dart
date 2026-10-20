@@ -109,9 +109,14 @@ class _StartupState extends ConsumerState<_Startup> {
   void _startBackups() {
     final svc = ref.read(backupServiceProvider);
     if (svc == null) return;
+    final uploader = ref.read(backupUploaderProvider);
     Future<void> check() async {
       await svc.runIfDue();
       if (mounted) ref.invalidate(backupStatusProvider);
+      // Also retries a copy that could not be sent earlier (offline). A no-op
+      // when the newest backup is already on the server or sync is not set up.
+      await uploader?.uploadLatest();
+      if (mounted) ref.invalidate(offsiteStatusProvider);
     }
 
     check();

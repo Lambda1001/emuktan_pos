@@ -5,6 +5,7 @@ import '../../app_state.dart';
 import '../../config/app_config.dart';
 import '../../core/format.dart';
 import '../../data/backup_service.dart';
+import '../../data/backup_upload.dart';
 import '../../ui/theme/app_tokens.dart';
 import '../../ui/widgets/error_line.dart';
 import '../../ui/widgets/sheet_frame.dart';
@@ -80,11 +81,33 @@ class _BackupPanelState extends ConsumerState<BackupPanel> {
       await _saveFolderIfChanged(svc);
       final b = await svc.backupNow();
       _toast('Backup saved and checked: ${b.name} (${_size(b.bytes)}).');
+      ref.invalidate(backupStatusProvider);
+      await _sendOffsite(quiet: true);
     } on BackupException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
       ref.invalidate(backupStatusProvider);
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Sends the newest backup to the dashboard server. [quiet] skips the
+  /// "nothing to do" messages (used right after a backup).
+  Future<void> _sendOffsite({bool quiet = false}) async {
+    final up = ref.read(backupUploaderProvider);
+    if (up == null) return;
+    final r = await up.uploadLatest();
+    ref.invalidate(offsiteStatusProvider);
+    if (!mounted) return;
+    switch (r.outcome) {
+      case UploadOutcome.sent:
+        _toast('Copy sent to the dashboard server.');
+      case UploadOutcome.nothingToSend:
+        if (!quiet) _toast('The newest backup is already on the server.');
+      case UploadOutcome.notConfigured || UploadOutcome.busy:
+        break;
+      case UploadOutcome.offline || UploadOutcome.rejected:
+        _toast('Not sent to the dashboard: ${r.message}');
     }
   }
 
@@ -175,6 +198,8 @@ class _BackupPanelState extends ConsumerState<BackupPanel> {
                     const SizedBox(height: Space.md),
                     ErrorLine('The last backup failed. ${status!.lastError}'),
                   ],
+                  const SizedBox(height: Space.md),
+                  _OffsiteLine(onSend: () => _sendOffsite()),
                   const SizedBox(height: Space.xl),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,6 +487,48 @@ class _PathDialogState extends State<_PathDialog> {
             if (p.isNotEmpty) Navigator.of(context).pop(p);
           },
           decoration: const InputDecoration(labelText: 'Backup file'),
+        ),
+      ],
+    );
+  }
+}
+
+/// The offsite copy on the dashboard server: off, waiting, or stored.
+class _OffsiteLine extends ConsumerWidget {
+  const _OffsiteLine({required this.onSend});
+  final VoidCallback onSend;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final configured = ref.watch(syncStatusProvider).value?.configured ?? false;
+    final st = ref.watch(offsiteStatusProvider).value;
+    if (!configured) {
+      return Text(
+        'Offsite copy is off. Enter the dashboard address and key under Dashboard '
+        'in these settings to also keep an encrypted copy of each backup on the dashboard server.',
+        style: t.bodySmall,
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          st?.sentAt == null
+              ? 'No copy has reached the dashboard server yet.'
+              : 'Copy on the dashboard server: ${st!.name}, sent ${_when(st.sentAt!, DateTime.now())}. '
+                    'It stays encrypted; the server cannot read it.',
+          style: t.bodyMedium,
+        ),
+        if (st?.error != null) ...[
+          const SizedBox(height: Space.sm),
+          ErrorLine(
+            'The latest copy could not be sent. ${st!.error} It is retried automatically.',
+          ),
+        ],
+        TextButton(
+          onPressed: onSend,
+          child: const Text('Send latest backup to the dashboard now'),
         ),
       ],
     );

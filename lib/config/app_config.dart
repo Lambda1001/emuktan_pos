@@ -63,4 +63,7 @@ abstract final class SyncConfig {
 
   /// Give up on a request after this long (the clinic's connection is slow).
   static const Duration requestTimeout = Duration(seconds: 20);
+
+  /// Give up on sending a backup file after this long.
+  static const Duration uploadTimeout = Duration(minutes: 10);
 }

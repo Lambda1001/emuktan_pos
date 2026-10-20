@@ -6,8 +6,10 @@ import 'core/bootstrap.dart';
 import 'core/receipt_printer.dart';
 import 'data/auth_service.dart';
 import 'data/backup_service.dart';
+import 'data/backup_upload.dart';
 import 'data/database.dart';
 import 'data/held_sales_service.dart';
+import 'data/mpesa_stk_service.dart';
 import 'data/patient_service.dart';
 import 'data/report_service.dart';
 import 'data/sales_admin_service.dart';
@@ -117,6 +119,27 @@ final syncServiceProvider = Provider<SyncService?>((ref) {
   if (app == null) return null;
   return SyncService(app.db);
 });
+
+/// Asks the dashboard to send M-Pesa prompts (KCB Buni). Null before the app is open.
+final mpesaStkServiceProvider = Provider<MpesaStkService?>((ref) {
+  final sync = ref.watch(syncServiceProvider);
+  return sync == null ? null : MpesaStkService(sync);
+});
+
+/// Sends the newest backup to the dashboard server. Null when there is no
+/// backup service (some tests) or no database.
+final backupUploaderProvider = Provider<BackupUploader?>((ref) {
+  final app = ref.watch(appContextProvider);
+  final backups = ref.watch(backupServiceProvider);
+  final sync = ref.watch(syncServiceProvider);
+  if (app == null || backups == null || sync == null) return null;
+  return BackupUploader(app.db, backups, sync);
+});
+
+/// Which backup the server last stored, and any failure. Refresh with `ref.invalidate`.
+final offsiteStatusProvider = FutureProvider<OffsiteStatus?>(
+  (ref) => ref.watch(backupUploaderProvider)?.status(),
+);
 
 /// Queue size and last success. Refresh with `ref.invalidate`.
 final syncStatusProvider = FutureProvider<SyncStatus?>(

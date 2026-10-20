@@ -34,6 +34,10 @@ class FakeServer implements SyncTransport {
   }
 
   @override
+  Future<SyncReply> postFile(Uri url, String key, File file) async =>
+      SyncReply(200, {'stored': 'x.db', 'bytes': file.lengthSync()});
+
+  @override
   Future<SyncReply> post(Uri url, String key, Object body) async {
     if (throwOnSend != null) throw throwOnSend!;
     // Round-trip through JSON, as the wire would.
